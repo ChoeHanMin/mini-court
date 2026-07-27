@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.choehanmin.minicourt",
+        "sha256_cert_fingerprints": ["E9:36:9B:C4:38:9D:9C:A6:39:CC:76:E7:8E:13:A7:2C:E3:5C:35:12:3E:10:72:E1:81:D8:27:5C:BC:43:86:E6"]
+      }
+    }]

@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>미니법정</title>
+<meta name="description" content="형사재판 판사가 되어 검사·변호인의 공방을 듣고 최종 판결을 내리는 도트 스타일 미니게임">
+<meta name="theme-color" content="#2b1c12">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root{
     --wood-dark:#2b1c12;
@@ -466,6 +473,35 @@
    미니법정 - Mini Court  ver 3.6
    제작자: 최한민
    ============================================================ */
+
+/* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
+   window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
+   GitHub Pages, 플레이스토어 앱(TWA/WebView) 등 일반 브라우저 환경에서는
+   이 객체가 없으므로, 없을 경우에만 localStorage 기반으로 동일한 인터페이스를
+   흉내내는 폴리필을 채워 넣습니다. (Claude 안에서 실행될 때는 원래 것을 그대로 사용) */
+if(!window.storage){
+  window.storage = {
+    get: async (key, shared) => {
+      const raw = localStorage.getItem('minicourt_'+key);
+      if(raw===null){ throw new Error('key not found: '+key); }
+      return {key, value: raw, shared: !!shared};
+    },
+    set: async (key, value, shared) => {
+      localStorage.setItem('minicourt_'+key, value);
+      return {key, value, shared: !!shared};
+    },
+    delete: async (key, shared) => {
+      const existed = localStorage.getItem('minicourt_'+key) !== null;
+      localStorage.removeItem('minicourt_'+key);
+      return {key, deleted:existed, shared: !!shared};
+    },
+    list: async (prefix, shared) => {
+      const p = 'minicourt_'+(prefix||'');
+      const keys = Object.keys(localStorage).filter(k=>k.startsWith(p)).map(k=>k.slice('minicourt_'.length));
+      return {keys, prefix, shared: !!shared};
+    }
+  };
+}
 
 /* ================= Judge name ================= */
 let judgeName = '';
@@ -3735,6 +3771,12 @@ renderGauge();
 loadSettings();
 loadJudgeName();
 showTitle();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* 서비스워커 파일이 없거나 로드 실패해도 게임 자체는 정상 동작 */ });
+  });
+}
 </script>
 </body>
 </html>

@@ -3461,6 +3461,7 @@ function showTitle(){
   const ov = el('overlay');
   ov.style.display='flex';
   ov.innerHTML = `
+    <img src="icon-512.png" alt="미니법정 로고" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
     <h1>미니법정</h1>
     <p>당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.</p>
     <p style="font-size:11px;color:var(--parchment-dim);">무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br><br>죄를 지은 자를 함부로 풀어주면<br>시민들의 의심을 사게 됩니다.</p>
@@ -3468,7 +3469,8 @@ function showTitle(){
     <button class="btn secondary" onclick="handleStartWarrantClick()">⚖️ 구속영장 실질심사 시작</button>
     <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
-    <div class="credit">제작자: 최한민</div>
+    <div class="credit">제작: 최한민</div>
+    <div class="credit" style="font-size:13px;margin-top:2px;">Created By Choi Hanmin</div>
     <div class="verline">ver 1.0.0.0</div>`;
 }
 

@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# main 브랜치에 push 될 때마다 저장소 루트를 그대로 GitHub Pages로 배포합니다.
+# mini-court.html (또는 index.html)이 저장소 루트에 있다는 가정입니다.
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Pages 설정
+        uses: actions/configure-pages@v5
+
+      - name: 배포 아티팩트 업로드 (저장소 루트 전체)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: GitHub Pages에 배포
+        id: deployment
+        uses: actions/deploy-pages@v4

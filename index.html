@@ -49,6 +49,20 @@
   #stage.large-text .overlay p{font-size:15px;}
   #stage.large-text .lawtext{font-size:15px;}
   #stage.large-text .np-headline{font-size:17px;}
+
+  /* ---------- 고대비 테마 ---------- */
+  #stage.high-contrast{background:#000;}
+  #stage.high-contrast #dialogueBox{background:#000;border-top-color:#ffe14d;}
+  #stage.high-contrast #dText{color:#ffffff;}
+  #stage.high-contrast #dSpeaker{color:#ffe14d;border-color:#ffe14d;}
+  #stage.high-contrast .overlay{background:rgba(0,0,0,0.98);}
+  #stage.high-contrast .overlay p{color:#ffffff;}
+  #stage.high-contrast .overlay h1{color:#ffe14d;}
+  #stage.high-contrast .btn{background:#ffe14d;color:#000;border-color:#fff;}
+  #stage.high-contrast .btn.secondary{background:#222;color:#ffe14d;border-color:#ffe14d;}
+  #stage.high-contrast .lawtext{background:#000;border-color:#ffe14d;color:#fff;}
+  #stage.high-contrast .vbtn{background:#111;color:#fff;border-color:#ffe14d;}
+  #stage.high-contrast #hud{background:#000;border-bottom-color:#ffe14d;}
   canvas.pixel{image-rendering:pixelated;image-rendering:crisp-edges;}
 
   /* ---------- HUD ---------- */
@@ -133,7 +147,113 @@
   .sprite-holder canvas{image-rendering:pixelated;}
   .dim{filter:brightness(0.45) drop-shadow(0 4px 3px rgba(0,0,0,0.5));}
   .active-bounce{animation:bounce 0.7s ease-in-out infinite;}
+  @keyframes dragAway{
+    0%{transform:translateX(-50%) translateY(0) rotate(0deg);opacity:1;}
+    25%{transform:translateX(-50%) translateY(4px) rotate(-6deg);}
+    100%{transform:translateX(160%) translateY(50px) rotate(-30deg);opacity:0;}
+  }
+  .dragged-away{animation:dragAway 1.3s ease-in forwards;}
+  @keyframes happyBounce{
+    0%,100%{transform:translateX(-50%) translateY(0) scale(1);}
+    20%{transform:translateX(-68%) translateY(-20px) scale(1.06);}
+    40%{transform:translateX(-32%) translateY(0) scale(0.97);}
+    60%{transform:translateX(-68%) translateY(-16px) scale(1.06);}
+    80%{transform:translateX(-32%) translateY(0) scale(1);}
+  }
+  .happy-bounce{animation:happyBounce 1.4s ease-in-out;}
+  @keyframes floatUp{
+    0%{opacity:1;transform:translate(-50%,0);}
+    100%{opacity:0;transform:translate(-50%,-60px);}
+  }
+  .float-emoji{
+    position:absolute;left:50%;bottom:22%;font-size:22px;
+    transform:translateX(-50%);animation:floatUp 1.4s ease-out forwards;
+    pointer-events:none;z-index:6;
+  }
   @keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-4px);}}
+
+  /* ---------- 추가 연출 애니메이션 ---------- */
+  @keyframes gavelSlam{
+    0%{transform:translate(-50%,-46px) rotate(-25deg);opacity:0;}
+    45%{transform:translate(-50%,-46px) rotate(-25deg);opacity:1;}
+    62%{transform:translate(-50%,14px) rotate(12deg);opacity:1;}
+    80%{transform:translate(-50%,-6px) rotate(6deg);}
+    100%{transform:translate(-50%,0) rotate(10deg);opacity:1;}
+  }
+  .gavel-icon{position:absolute;left:50%;top:26%;font-size:44px;z-index:8;animation:gavelSlam 0.5s ease-in forwards;pointer-events:none;filter:drop-shadow(0 3px 2px rgba(0,0,0,0.6));}
+  @keyframes screenShake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-6px);}
+    40%{transform:translateX(6px);}
+    60%{transform:translateX(-4px);}
+    80%{transform:translateX(4px);}
+  }
+  .shake{animation:screenShake 0.35s ease-in-out;}
+
+  @keyframes enterRise{
+    0%{transform:translateX(-50%) translateY(30px);opacity:0;}
+    100%{transform:translateX(-50%) translateY(0);opacity:1;}
+  }
+  .enter-anim{animation:enterRise 0.6s ease-out;}
+
+  @keyframes objectionFlash{
+    0%{transform:translateX(-50%) scale(1);}
+    30%{transform:translateX(-50%) scale(1.16);}
+    100%{transform:translateX(-50%) scale(1);}
+  }
+  .objection-flash{animation:objectionFlash 0.35s ease-out;}
+  @keyframes screenFlashWhite{
+    0%{background:rgba(255,255,255,0.4);}
+    100%{background:rgba(255,255,255,0);}
+  }
+  .flash-overlay{position:absolute;inset:0;pointer-events:none;z-index:9;animation:screenFlashWhite 0.3s ease-out forwards;}
+
+  @keyframes stampIn{
+    0%{transform:translate(-50%,-50%) scale(3) rotate(-15deg);opacity:0;}
+    60%{transform:translate(-50%,-50%) scale(0.9) rotate(-15deg);opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(1) rotate(-15deg);opacity:0.88;}
+  }
+  .stamp{
+    position:absolute;left:50%;top:16%;
+    border:4px solid var(--danger);color:var(--danger);
+    font-weight:bold;font-size:22px;padding:4px 16px;
+    transform:translate(-50%,-50%) rotate(-15deg);
+    animation:stampIn 0.5s ease-out;
+    z-index:16;letter-spacing:6px;
+    pointer-events:none;background:rgba(0,0,0,0.05);
+  }
+
+  @keyframes cardFlip{
+    0%{transform:rotateY(90deg);opacity:0;}
+    100%{transform:rotateY(0deg);opacity:1;}
+  }
+  .flip-in{animation:cardFlip 0.45s ease-out both;}
+
+  @keyframes confettiFall{
+    0%{transform:translateY(-20px) rotate(0deg);opacity:1;}
+    100%{transform:translateY(360px) rotate(360deg);opacity:0;}
+  }
+  .confetti{position:absolute;top:0;width:8px;height:8px;pointer-events:none;z-index:25;animation:confettiFall 2.2s ease-in forwards;}
+
+  @keyframes vignetteIn{0%{opacity:0;}100%{opacity:1;}}
+  .end-vignette{
+    position:absolute;inset:0;z-index:24;pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,0.8) 100%);
+    animation:vignetteIn 1.1s ease-in forwards;
+  }
+
+  @keyframes iconShake{
+    0%,100%{transform:translateX(0) rotate(0);}
+    25%{transform:translateX(-3px) rotate(-10deg);}
+    75%{transform:translateX(3px) rotate(10deg);}
+  }
+  .shake-once{animation:iconShake 0.4s ease-in-out;}
+
+  @keyframes newspaperSlam{
+    0%{transform:translateY(-40px) rotate(-3deg);opacity:0;}
+    70%{transform:translateY(4px) rotate(1deg);opacity:1;}
+    100%{transform:translateY(0) rotate(0deg);opacity:1;}
+  }
 
   /* ---------- Dialogue box ---------- */
   #dialogueBox{
@@ -200,7 +320,7 @@
   }
   .btn.danger{background:linear-gradient(180deg,var(--crimson-light),var(--crimson));color:#fff;}
   .btn.small{width:auto;max-width:none;padding:8px 12px;font-size:11px;}
-  .credit{font-size:10px;color:var(--parchment-dim);letter-spacing:1px;margin-top:20px;opacity:0.8;}
+  .credit{font-size:16px;color:var(--brass);letter-spacing:2px;margin-top:22px;font-weight:bold;}
   .verline{font-size:10px;color:var(--brass-dim);letter-spacing:2px;margin-top:2px;}
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
@@ -210,6 +330,7 @@
   .newspaper{
     border:2px solid var(--parchment-dim); background:#e9e2ce; color:#1a1410;
     padding:10px 12px; margin-bottom:14px; width:100%; max-width:340px; text-align:center;
+    animation:newspaperSlam 0.5s ease-out;
   }
   .np-masthead{font-size:11px;letter-spacing:4px;border-bottom:2px solid #1a1410;padding-bottom:4px;margin-bottom:6px;font-weight:bold;}
   .np-headline{font-size:15px;font-weight:bold;line-height:1.3;margin-bottom:4px;}
@@ -299,16 +420,20 @@
     <div class="sub">신중하게 선고하십시오. 지나친 판결은 대가가 따릅니다.</div>
     <div class="verdict-grid" id="verdictGrid">
       <button class="vbtn lenient" data-v="선고유예">선고유예</button>
+      <button class="vbtn lenient" data-v="과료">과료</button>
       <button class="vbtn lenient" data-v="벌금">벌금형</button>
-      <button class="vbtn lenient" data-v="집행유예">집행유예</button>
+      <button class="vbtn lenient" data-v="구류">구류</button>
+      <button class="vbtn" data-v="집행유예">집행유예</button>
       <button class="vbtn" data-v="징역">징역형</button>
+      <button class="vbtn" data-v="금고">금고형</button>
       <button class="vbtn severe" data-v="무기징역">무기징역</button>
+      <button class="vbtn severe" data-v="무기금고">무기금고</button>
       <button class="vbtn severe" data-v="사형">사형</button>
       <button class="vbtn lenient" data-v="무죄" style="grid-column:1/3;">무죄 선고</button>
     </div>
 
     <div id="yearsPanel">
-      <div class="sub">징역 연수를 입력하세요 (1~50년)</div>
+      <div class="sub" id="yearsPanelLabel">징역 연수를 입력하세요 (1~50년)</div>
       <div id="yearsDisplay">0 년</div>
       <div id="yearsHint"></div>
       <div id="numpad"></div>
@@ -317,6 +442,16 @@
         <button class="btn" id="yearsConfirm">선고 확정</button>
       </div>
     </div>
+
+    <div id="extrasPanel" style="display:none;">
+      <div class="sub">부가형을 함께 선고할 수 있습니다 (중복 선택 가능)</div>
+      <div id="extrasOptions" style="display:flex;flex-direction:column;gap:8px;margin:10px 0;"></div>
+      <div class="rowbtns">
+        <button class="btn secondary" id="extrasBack">뒤로</button>
+        <button class="btn" id="extrasConfirm">선고 확정</button>
+      </div>
+    </div>
+
     <div id="footNote">숫자 키보드로도 입력할 수 있습니다.</div>
   </div>
 
@@ -327,18 +462,60 @@
 
 <script>
 /* ============================================================
-   미니법정 - Mini Court  ver 2.0
+   미니법정 - Mini Court  ver 3.5
    제작자: 최한민
    ============================================================ */
 
+/* ================= Judge name ================= */
+let judgeName = '';
+async function loadJudgeName(){
+  try{
+    const res = await window.storage.get('judgeName', false);
+    if(res && res.value) judgeName = res.value;
+  }catch(e){}
+}
+async function saveJudgeName(name){
+  judgeName = name;
+  try{ await window.storage.set('judgeName', name, false); }catch(e){}
+}
+function showNameInput(onDone){
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `
+    <h1>판사 등록</h1>
+    <p>당신은 판사입니다.<br>당신의 이름은 무엇입니까?</p>
+    <input id="judgeNameInput" type="text" maxlength="12" placeholder="이름 입력"
+      style="width:100%;max-width:260px;padding:10px;font-size:14px;text-align:center;
+      background:rgba(0,0,0,0.3);border:2px solid var(--brass-dim);color:var(--parchment);
+      margin:12px 0;border-radius:2px;font-family:inherit;">
+    <button class="btn" id="judgeNameConfirm">확인</button>`;
+  const input = el('judgeNameInput');
+  el('judgeNameConfirm').addEventListener('click', ()=>{
+    const val = input.value.trim();
+    saveJudgeName(val || '이름 없는 판사');
+    onDone();
+  });
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ el('judgeNameConfirm').click(); } });
+  setTimeout(()=>input.focus(), 60);
+}
+function handleStartTrialClick(){
+  if(judgeName) showDifficultySelect();
+  else showNameInput(showDifficultySelect);
+}
+function handleStartWarrantClick(){
+  if(judgeName) showWarrantIntro();
+  else showNameInput(showWarrantIntro);
+}
+
 /* ================= Settings ================= */
-let settings = { typeSpeed:26, largeText:false, showHint:false, lang:'ko' };
+let settings = { typeSpeed:26, largeText:false, showHint:false, lang:'ko', highContrast:false };
 async function loadSettings(){
   try{
     const res = await window.storage.get('settings', false);
     if(res && res.value) Object.assign(settings, JSON.parse(res.value));
   }catch(e){}
   document.getElementById('stage').classList.toggle('large-text', !!settings.largeText);
+  document.getElementById('stage').classList.toggle('high-contrast', !!settings.highContrast);
   syncHudLabels();
 }
 async function saveSettings(){
@@ -366,7 +543,7 @@ function adjustedRange(c){
 /* ================= i18n (menu chrome only - 사건 대사/법률은 한국어 고정) ================= */
 const I18N = {
   ko:{
-    startTrial:'재판 시작', records:'📖 재판 기록', tutorial:'🎓 튜토리얼',
+    startTrial:'형사재판 시작', records:'📖 재판 기록', tutorial:'🎓 튜토리얼',
     modeTitle:'재판 방식 선택', modePrompt:'어떤 방식으로 재판을 진행하시겠습니까?',
     modeSeq:'정식 재판 (순서대로)', modeRandom:'전체 재판 시작 (랜덤 순서)', modePractice:'사건 선택 (연습 모드)', back:'뒤로',
     diffTitle:'난이도 선택', diffPrompt:'판정 기준의 엄격함을 선택하세요.',
@@ -380,7 +557,7 @@ const I18N = {
     close:'닫기', evidenceLabel:'증거', summaryLabel:'요약', muteOn:'소리', muteOff:'음소거'
   },
   en:{
-    startTrial:'Start Trial', records:'📖 Case Records', tutorial:'🎓 Tutorial',
+    startTrial:'Start Criminal Trial', records:'📖 Case Records', tutorial:'🎓 Tutorial',
     modeTitle:'Select Trial Mode', modePrompt:'How would you like to proceed?',
     modeSeq:'Standard Trial (In Order)', modeRandom:'Start Full Trial (Random Order)', modePractice:'Case Select (Practice)', back:'Back',
     diffTitle:'Select Difficulty', diffPrompt:'Choose how strict the grading should be.',
@@ -729,17 +906,30 @@ function computeScore(type, years){
   switch(type){
     case '무죄': return 0;
     case '선고유예': return 1;
+    case '과료': return 1.5;
     case '벌금': return 2;
+    case '구류': return 2.5;
     case '집행유예': return 3;
     case '징역': return 3 + Math.min(Math.max(years||1,1),50)*0.2;
+    case '금고': return 3 + Math.min(Math.max(years||1,1),50)*0.2;
     case '무기징역': return 14;
+    case '무기금고': return 14;
     case '사형': return 16;
     default: return 3;
   }
 }
-function verdictLabel(type, years){
-  if(type==='징역') return `징역 ${years}년`;
-  return type;
+function verdictLabel(type, years, extras){
+  let base;
+  if(type==='징역' || type==='금고') base = `${type} ${years}년`;
+  else base = type;
+  if(extras){
+    const add = [];
+    if(extras.forfeiture) add.push('몰수');
+    if(extras.suspend) add.push('자격정지');
+    if(extras.revoke) add.push('자격상실');
+    if(add.length) base += ' + ' + add.join(' + ');
+  }
+  return base;
 }
 
 /* ================= Flavor pools ================= */
@@ -777,10 +967,10 @@ const REACTION_MAP = {
 };
 
 const ACHIEVEMENTS = [
-  {id:'no_acquit', name:'냉철한 눈', desc:'무죄 선고 없이 전 사건 클리어', check: h=> h.length>0 && h.every(x=>x.type!=='무죄')},
-  {id:'perfect_judge', name:'완벽한 판사', desc:'시민의심 0으로 전체 클리어', check: ()=> state.suspicion===0},
-  {id:'jury_friend', name:'배심원의 벗', desc:'배심원 평결과 일치하는 판결', check: h=> h.some(x=>x.juryMatch===true)},
-  {id:'comedy_master', name:'유쾌한 재판장', desc:'우스꽝스러운 사건에서 모두 무죄를 선고함', check: h=>{
+  {id:'no_acquit', icon:'🧊', name:'냉철한 눈', desc:'무죄 선고 없이 전 사건 클리어', check: h=> h.length>0 && h.every(x=>x.type!=='무죄')},
+  {id:'perfect_judge', icon:'⚖️', name:'완벽한 판사', desc:'시민의심 0으로 전체 클리어', check: ()=> state.suspicion===0},
+  {id:'jury_friend', icon:'🤝', name:'배심원의 벗', desc:'배심원 평결과 일치하는 판결', check: h=> h.some(x=>x.juryMatch===true)},
+  {id:'comedy_master', icon:'🎭', name:'유쾌한 재판장', desc:'우스꽝스러운 사건에서 모두 무죄를 선고함', check: h=>{
     const comedicIds=[2,4,7];
     return comedicIds.every(id=> h.some(x=>x.caseId===id && x.type==='무죄'));
   }}
@@ -903,6 +1093,7 @@ const CASES = [
 },
 {
   id:5,
+  allowsForfeiture:true,
   title:'사건 5. 보이스피싱 조직 가담',
   charge:'사기 (조직적 보이스피싱 인출책)',
   guilty:true,
@@ -1021,6 +1212,8 @@ const CASES = [
 },
 {
   id:9,
+  qualification:'공무원',
+  allowsForfeiture:true,
   title:'사건 9. 공직자 뇌물수수',
   charge:'뇌물수수 (인허가 편의 대가)',
   guilty:true,
@@ -1138,6 +1331,7 @@ const CASES = [
 },
 {
   id:13,
+  allowsForfeiture:true,
   title:'사건 13. 특수강간',
   charge:'특수강간 (흉기 휴대)',
   guilty:true,
@@ -1223,6 +1417,7 @@ const CASES = [
 },
 {
   id:16,
+  allowsForfeiture:true,
   title:'사건 16. 현주건조물방화',
   charge:'현주건조물 등 방화',
   guilty:true,
@@ -1252,6 +1447,7 @@ const CASES = [
 },
 {
   id:17,
+  allowsForfeiture:true,
   title:'사건 17. 강도',
   charge:'강도',
   guilty:true,
@@ -1280,6 +1476,7 @@ const CASES = [
 },
 {
   id:18,
+  allowsForfeiture:true,
   title:'사건 18. 특수강도',
   charge:'특수강도 (야간 주거침입)',
   guilty:true,
@@ -1308,6 +1505,7 @@ const CASES = [
 },
 {
   id:19,
+  allowsForfeiture:true,
   title:'사건 19. 강도살인',
   charge:'강도살인',
   guilty:true,
@@ -1337,6 +1535,7 @@ const CASES = [
 },
 {
   id:20,
+  allowsForfeiture:true,
   title:'사건 20. 존속살해',
   charge:'존속살해',
   guilty:true,
@@ -1366,6 +1565,8 @@ const CASES = [
 },
 {
   id:21,
+  qualification:'공무원',
+  allowsForfeiture:true,
   title:'사건 21. 국가기밀 유출 (간첩)',
   charge:'외국 등을 위한 간첩',
   guilty:true,
@@ -1395,6 +1596,7 @@ const CASES = [
 },
 {
   id:22,
+  qualification:'공무원',
   title:'사건 22. 공무상비밀누설',
   charge:'공무상비밀누설',
   guilty:true,
@@ -1422,6 +1624,8 @@ const CASES = [
 },
 {
   id:23,
+  allowsForfeiture:true,
+  qualification:'법인 임원',
   title:'사건 23. 횡령 (특정경제범죄 가중처벌)',
   charge:'횡령 (이득액 10억원 상당)',
   guilty:true,
@@ -1451,6 +1655,7 @@ const CASES = [
 },
 {
   id:24,
+  qualification:'법인 임원',
   title:'사건 24. 업무상배임',
   charge:'업무상배임',
   guilty:true,
@@ -1508,6 +1713,7 @@ const CASES = [
 },
 {
   id:26,
+  allowsForfeiture:true,
   title:'사건 26. 뇌물공여',
   charge:'뇌물공여',
   guilty:true,
@@ -1536,6 +1742,7 @@ const CASES = [
 },
 {
   id:27,
+  allowsForfeiture:true,
   title:'사건 27. 스토킹',
   charge:'스토킹 (흉기 휴대)',
   guilty:true,
@@ -1564,6 +1771,7 @@ const CASES = [
 },
 {
   id:28,
+  allowsForfeiture:true,
   title:'사건 28. 마약류 매매',
   charge:'마약류 관리에 관한 법률 위반 (향정신성의약품 매매)',
   guilty:true,
@@ -1706,6 +1914,7 @@ const CASES = [
 },
 {
   id:33,
+  allowsForfeiture:true,
   title:'사건 33. 공갈',
   charge:'공갈',
   guilty:true,
@@ -1790,6 +1999,7 @@ const CASES = [
 },
 {
   id:36,
+  allowsForfeiture:true,
   title:'사건 36. 컴퓨터등사용사기',
   charge:'컴퓨터등 사용사기',
   guilty:true,
@@ -1818,6 +2028,7 @@ const CASES = [
 },
 {
   id:37,
+  allowsForfeiture:true,
   title:'사건 37. 사문서위조',
   charge:'사문서위조 및 행사',
   guilty:true,
@@ -1846,6 +2057,7 @@ const CASES = [
 },
 {
   id:38,
+  allowsForfeiture:true,
   title:'사건 38. 통화위조',
   charge:'통화위조 및 행사',
   guilty:true,
@@ -1928,6 +2140,96 @@ const CASES = [
     {icon:'📋', name:'고소장', desc:'허위 피해 사실이 담긴 고소 내용'},
     {icon:'🏥', name:'진단서', desc:'주장하는 사건 발생일보다 앞선 발급일 확인'}
   ]
+},
+{
+  id:41,
+  allowsForfeiture:true,
+  title:'사건 41. 강간 · 사체손괴 · 방화 (경합범)',
+  charge:'강간, 사체 등의 손괴, 현주건조물방화',
+  guilty:true,
+  tag:'heavy',
+  intro:'피고인은 피해자를 강간했고, 그 과정에서 피해자가 지병으로 급사하자 이를 은폐하기 위해 시신을 다른 장소로 옮겨 유기한 뒤 불을 질러 증거를 인멸하려 한 혐의로 기소되었습니다. 세 가지 죄가 함께 심리됩니다.',
+  prosOpen:'피고인은 강간을 저질렀고, 피해자가 사망하자 시신을 훼손·유기했으며, 증거를 없애기 위해 방화까지 저질렀습니다. DNA와 화재 감식 결과가 명백합니다.',
+  defOpen:'변호인은 강간 사실은 다투지 않으나, 사망은 피고인의 행위와 무관한 지병 때문이었고 당황한 나머지 저지른 사후 행동이라고 주장합니다.',
+  rounds:[
+    {p:'부검 결과 사망 원인은 지병으로 확인되었으나, 그 직후 벌어진 세 가지 범행은 모두 피고인의 독립적 범죄입니다.', d:'죽은 사람을 어떻게 처리해야 할지 몰라 저지른 우발적 행동들이었습니다.', momentum:10},
+    {p:'시신을 옮기고 불을 지른 일련의 행동은 명백히 계획적이고 조직적입니다.', d:'당황한 상태에서 벌어진 일이지, 치밀하게 계획한 것은 아닙니다.', momentum:8}
+  ],
+  prosFinal:'검사는 피고인에게 징역 15년을 구형합니다.',
+  defFinal:'변호인은 사후 행동에 대한 감경을 호소합니다.',
+  finalStatement:'너무 당황해서 그런 짓을 저질렀습니다. 죽일 생각은 전혀 없었습니다.',
+  fairMin:4.4, fairMax:10.0, outrageHigh:null, outrageLow:4.0,
+  disallowed:['사형','벌금','선고유예','과료','구류'],
+  charges:[
+    {article:'형법 제297조 (강간)', text:'"폭행 또는 협박으로 사람을 강간한 자는 3년 이상의 유기징역에 처한다."'},
+    {article:'형법 제161조 (시체 등의 유기 등)', text:'"시체... 등을 손괴, 유기, 은닉 또는 영득한 자는 7년 이하의 징역에 처한다."'},
+    {article:'형법 제164조 (현주건조물 등 방화)', text:'"불을 놓아... 건조물 등을 불태운 자는 무기 또는 3년 이상의 징역에 처한다."'}
+  ],
+  precedent:'경합범은 가장 무거운 죄(방화)의 형에 그 2분의 1까지 가중되어, 통상 징역 7~15년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'🧬', name:'DNA 증거', desc:'강간 사실을 뒷받침하는 물증'},
+    {icon:'🔥', name:'화재 감식 결과', desc:'시신 유기 장소에서의 방화 흔적'}
+  ]
+},
+{
+  id:42,
+  title:'사건 42. 특수강도 · 감금 · 상해 (경합범)',
+  charge:'특수강도, 감금, 상해',
+  guilty:true,
+  tag:'heavy',
+  allowsForfeiture:true,
+  intro:'피고인은 야간에 피해자의 집에 침입해 금품을 강취한 뒤, 신고를 막기 위해 피해자를 수 시간 동안 묶어 가두고 상해까지 입힌 혐의로 기소되었습니다.',
+  prosOpen:'피고인은 야간에 흉기를 이용해 금품을 강취했고, 신고를 막기 위해 피해자를 결박한 채 방 안에 가두었으며, 저항하는 피해자에게 상해를 입혔습니다.',
+  defOpen:'피고인은 금품을 가져간 사실은 인정하나, 결박은 잠시였고 상해는 몸싸움 중 우발적으로 발생했다고 주장합니다.',
+  rounds:[
+    {p:'피해자는 6시간 동안 결박된 채 방치되어 있었습니다.', d:'신고를 막기 위한 최소한의 시간이었을 뿐입니다.', momentum:10},
+    {p:'진단서상 전치 4주의 상해가 확인되어 우발적이라 보기 어렵습니다.', d:'몸싸움 중 어쩔 수 없이 발생한 상해입니다.', momentum:8}
+  ],
+  prosFinal:'검사는 피고인에게 징역 9년을 구형합니다.',
+  defFinal:'변호인은 감금과 상해가 부수적이었다며 감경을 호소합니다.',
+  finalStatement:'다치게 할 생각은 없었습니다. 신고만 막으려던 것이었습니다.',
+  fairMin:4.4, fairMax:9.0, outrageHigh:null, outrageLow:4.0,
+  disallowed:['사형','벌금','선고유예','과료','구류'],
+  charges:[
+    {article:'형법 제334조 (특수강도)', text:'"야간에 사람의 주거... 등에 침입하여 제333조의 죄를 범한 자는 무기 또는 5년 이상의 징역에 처한다."'},
+    {article:'형법 제276조 (체포, 감금)', text:'"사람을 체포 또는 감금한 자는 5년 이하의 징역 또는 700만원 이하의 벌금에 처한다."'},
+    {article:'형법 제257조 (상해)', text:'"사람의 신체를 상해한 자는 7년 이하의 징역, 10년 이하의 자격정지 또는 1천만원 이하의 벌금에 처한다."'}
+  ],
+  precedent:'경합범은 가장 무거운 죄(특수강도)의 형에 그 2분의 1까지 가중되어, 통상 징역 5~12년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'🪢', name:'결박 도구', desc:'피해자를 묶는 데 사용된 끈'},
+    {icon:'🏥', name:'상해진단서', desc:'전치 4주 진단'}
+  ]
+},
+{
+  id:43,
+  title:'사건 43. 횡령 · 사문서위조 · 배임 (경합범)',
+  charge:'횡령, 사문서위조, 배임',
+  guilty:true,
+  allowsForfeiture:true,
+  qualification:'법인 임원',
+  intro:'피고인은 회사 자금을 횡령한 뒤 이를 은폐하기 위해 승인 문서를 위조했고, 별도로 회사에 손해를 끼치는 배임 행위까지 저지른 혐의로 기소되었습니다.',
+  prosOpen:'피고인은 회사 자금 3억원을 횡령하고, 이를 정당화하기 위해 대표이사 명의의 승인서를 위조했으며, 별도로 특수관계인에게 유리한 거래를 체결해 회사에 손해를 끼쳤습니다.',
+  defOpen:'피고인은 세 혐의 모두 회사의 묵인 또는 승인 하에 이루어진 정상적 업무 처리였다고 주장합니다.',
+  rounds:[
+    {p:'위조된 승인서의 서명은 필적 감정 결과 대표이사의 것이 아님이 확인되었습니다.', d:'대표이사가 구두로 승인한 내용을 문서화했을 뿐입니다.', momentum:10},
+    {p:'특수관계인과의 거래 조건은 시장가보다 현저히 불리했습니다.', d:'장기적 협력 관계를 고려한 경영 판단이었습니다.', momentum:6}
+  ],
+  prosFinal:'검사는 피고인에게 징역 4년을 구형합니다.',
+  defFinal:'변호인은 세 혐의 모두 정당한 업무 처리였다며 무죄를 주장합니다.',
+  finalStatement:'회사를 위해 한 일이 이렇게 될 줄 몰랐습니다.',
+  fairMin:1.0, fairMax:4.5, outrageHigh:6.0, outrageLow:null,
+  disallowed:['무기징역','무기금고','사형'],
+  charges:[
+    {article:'형법 제355조 제1항 (횡령)', text:'"타인의 재물을 보관하는 자가 그 재물을 횡령하거나 그 반환을 거부한 때에는 5년 이하의 징역 또는 1천500만원 이하의 벌금에 처한다."'},
+    {article:'형법 제231조 (사문서등의 위조·변조)', text:'"타인의 권리·의무에 관한 문서를 위조 또는 변조한 자는 5년 이하의 징역 또는 1천만원 이하의 벌금에 처한다."'},
+    {article:'형법 제355조 제2항 (배임)', text:'"타인의 사무를 처리하는 자가 그 임무에 위배하여 재산상의 이익을 취득... 손해를 가한 때에도 제1항의 형과 같다."'}
+  ],
+  precedent:'동종(징역)의 경합범은 가장 무거운 죄의 장기에 2분의 1까지 가중하되 각 죄의 형기를 합산한 범위(최대 15년)를 넘을 수 없어, 통상 집행유예부터 징역 7년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'✍️', name:'필적 감정 결과서', desc:'위조된 승인서 서명이 대표이사 필체와 다름'},
+    {icon:'📄', name:'거래 계약서', desc:'시장가보다 불리한 거래 조건 확인'}
+  ]
 }
 ];
 
@@ -1957,6 +2259,140 @@ const TUTORIAL_CASE = {
   ]
 };
 
+/* ================= 구속영장 실질심사 데이터 ================= */
+const WARRANT_CASES = [
+{
+  title:'영장 1. 생계형 절도 피의자',
+  intro:'피의자는 편의점에서 물건을 훔친 혐의로 체포되었습니다. 검사가 구속영장을 청구했습니다.',
+  defendantStatement:'저는 도망갈 생각이 없습니다. 가족과 함께 이 동네에서 10년째 살고 있습니다.',
+  prosArgument:'죄질은 가볍지만 피의자는 최근 동종 전과가 있어 재범 우려가 있으므로 구속 수사가 필요합니다.',
+  defArgument:'피의자는 일정한 주거가 있고 가족과 함께 살고 있으며, 도주하거나 증거를 인멸할 이유가 전혀 없습니다.',
+  evidence:[
+    {icon:'🏠', name:'주민등록등본', desc:'10년간 같은 주소지에 거주 중임을 확인'},
+    {icon:'👨‍👩‍👧', name:'가족관계증명서', desc:'배우자, 자녀와 동거 중임을 확인'}
+  ],
+  flightRisk:false,
+  evidenceRisk:false
+},
+{
+  title:'영장 2. 보이스피싱 조직원',
+  intro:'피의자는 보이스피싱 조직의 핵심 조직원으로, 여죄가 다수 의심되는 상태에서 체포되었습니다.',
+  defendantStatement:'저는 아무 짓도 안 했습니다. 그냥 아르바이트였을 뿐입니다.',
+  prosArgument:'피의자의 휴대전화에서 해외 출국을 준비한 정황과 조직원들 간의 증거 인멸 지시 대화가 발견되었습니다.',
+  defArgument:'출국 준비는 예정된 여행이었을 뿐이며, 대화 내용은 확대 해석된 것입니다.',
+  evidence:[
+    {icon:'✈️', name:'항공권 예매 내역', desc:'체포 이틀 뒤 출국 예정이었던 편도 항공권'},
+    {icon:'💬', name:'조직 대화방 기록', desc:'"휴대폰 정리해" 등 증거 인멸을 지시하는 대화'}
+  ],
+  flightRisk:true,
+  evidenceRisk:true
+},
+{
+  title:'영장 3. 살인 용의자',
+  intro:'피의자는 지인을 살해한 혐의로 체포되었습니다. DNA와 CCTV 등 물증은 이미 충분히 확보된 상태입니다.',
+  defendantStatement:'억울합니다. 하지만... 도망가고 싶은 마음이 드는 건 사실입니다.',
+  prosArgument:'중대 범죄인 데다, 피의자가 지인에게 "이대로 잡히느니 해외로 뜨겠다"고 말한 정황이 확인되었습니다.',
+  defArgument:'홧김에 한 말일 뿐이며, 실제 출국 시도나 준비 정황은 전혀 없습니다.',
+  evidence:[
+    {icon:'💬', name:'지인 진술', desc:'"해외로 뜨겠다"는 발언을 들었다는 진술'},
+    {icon:'🧬', name:'DNA 감정 결과', desc:'물증은 이미 충분히 확보된 상태'}
+  ],
+  flightRisk:true,
+  evidenceRisk:false
+},
+{
+  title:'영장 4. 폭행 및 증인 회유 의혹',
+  intro:'피의자는 폭행 혐의로 조사받는 과정에서, 목격자에게 진술을 바꿔달라고 회유한 정황이 포착되었습니다.',
+  defendantStatement:'그냥 오해를 풀고 싶어서 연락한 것뿐입니다.',
+  prosArgument:'피의자가 목격자에게 반복적으로 연락하여 진술 번복을 종용한 통화 기록이 확인되었습니다.',
+  defArgument:'단순히 억울함을 호소한 것이며, 협박이나 회유의 의도는 없었습니다.',
+  evidence:[
+    {icon:'📞', name:'통화 기록', desc:'목격자에게 반복적으로 연락한 내역'},
+    {icon:'📝', name:'목격자 진술서', desc:'"진술을 바꿔달라는 요청을 받았다"는 진술'}
+  ],
+  flightRisk:false,
+  evidenceRisk:true
+},
+{
+  title:'영장 5. 뇌물 의혹 공직자',
+  intro:'피의자는 뇌물 수수 의혹으로 여론의 큰 주목을 받고 있는 공직자입니다. 관련 증거는 이미 압수수색으로 확보되었습니다.',
+  defendantStatement:'억울하지만, 조사에는 성실히 임하겠습니다.',
+  prosArgument:'사안이 중대하고 사회적 파장이 큰 만큼, 엄정한 수사를 위해 구속이 필요합니다.',
+  defArgument:'관련 자료는 이미 전부 압수되었고, 피의자는 주거가 일정하며 도주 시도나 증거 인멸 정황이 전혀 없습니다.',
+  evidence:[
+    {icon:'📦', name:'압수수색 결과', desc:'관련 자료 일체가 이미 확보된 상태'},
+    {icon:'🏢', name:'출근 기록', desc:'조사 개시 이후에도 정상적으로 출근한 기록'}
+  ],
+  flightRisk:false,
+  evidenceRisk:false
+},
+{
+  title:'영장 6. 마약 소지 피의자',
+  intro:'피의자는 자택에서 소량의 마약을 소지한 혐의로 체포되었습니다. 여죄가 있을 것으로 의심되지만 아직 확인된 것은 없습니다.',
+  defendantStatement:'조사에 성실히 임하겠습니다. 도망갈 생각은 전혀 없습니다.',
+  prosArgument:'마약 사건은 여죄와 유통 경로 수사가 중요하므로 구속 수사가 필요합니다.',
+  defArgument:'피의자는 초범이고 주거가 일정하며, 조사에도 자발적으로 출석해 협조하고 있습니다.',
+  evidence:[
+    {icon:'💊', name:'압수품', desc:'소량의 마약이 자택에서 발견됨'},
+    {icon:'📋', name:'출석 기록', desc:'모든 조사 일정에 자진 출석함'}
+  ],
+  flightRisk:false,
+  evidenceRisk:false
+},
+{
+  title:'영장 7. 조직폭력배 두목',
+  intro:'피의자는 조직폭력배 두목으로, 자신에게 불리한 진술을 한 조직원에게 보복을 암시하는 정황이 포착되었습니다.',
+  defendantStatement:'그 친구가 오해한 겁니다. 저는 그런 뜻으로 말한 적 없습니다.',
+  prosArgument:'피의자가 조직원들에게 "입 조심하라"는 취지의 메시지를 보낸 정황이 확인되어, 증인에 대한 위해와 증거 인멸이 우려됩니다.',
+  defArgument:'평소 쓰던 말버릇일 뿐이며, 구체적인 위협이나 실행 행위는 전혀 없었습니다.',
+  evidence:[
+    {icon:'💬', name:'메시지 기록', desc:'조직원들에게 보낸 경고성 메시지'},
+    {icon:'🗣️', name:'진술 번복 정황', desc:'핵심 증인이 갑자기 진술을 번복함'}
+  ],
+  flightRisk:false,
+  evidenceRisk:true
+},
+{
+  title:'영장 8. 해외 도피 전력자',
+  intro:'피의자는 성범죄 혐의로 체포되었습니다. 과거 다른 사건으로 수사를 받던 중 해외로 출국해 장기간 귀국하지 않은 전력이 있습니다.',
+  defendantStatement:'그때는 사정이 있었을 뿐, 이번엔 도망가지 않겠습니다.',
+  prosArgument:'피의자는 과거에도 수사망을 피해 해외로 도피한 전력이 있어, 이번에도 도주할 우려가 매우 높습니다.',
+  defArgument:'과거의 일과 이번 사건은 무관하며, 현재는 국내에 가족과 직장이 있어 상황이 다릅니다.',
+  evidence:[
+    {icon:'🛂', name:'출입국 기록', desc:'과거 수사 중 3년간 해외 체류 기록'},
+    {icon:'🧬', name:'DNA 감정 결과', desc:'혐의를 뒷받침하는 물증'}
+  ],
+  flightRisk:true,
+  evidenceRisk:false
+},
+{
+  title:'영장 9. 회사 서버 삭제 시도 피의자',
+  intro:'피의자는 회사 자금을 횡령한 혐의로 조사받던 중, 관련 회계 서버의 데이터를 삭제하려 시도한 정황이 포착되었습니다.',
+  defendantStatement:'서버 정리는 정기적인 백업 절차였을 뿐입니다.',
+  prosArgument:'조사 개시 직후 회계 서버에 원격 접속해 관련 파일을 대량 삭제하려 한 로그가 확인되었습니다.',
+  defArgument:'정기 백업 일정이 우연히 겹쳤을 뿐이며, 실제로 삭제된 파일도 없습니다.',
+  evidence:[
+    {icon:'🖥️', name:'서버 접속 로그', desc:'조사 개시 직후 원격 접속해 삭제를 시도한 기록'},
+    {icon:'🗑️', name:'복구된 삭제 이력', desc:'삭제 시도가 있었으나 복구된 파일 목록'}
+  ],
+  flightRisk:false,
+  evidenceRisk:true
+},
+{
+  title:'영장 10. 초범 폭행 피의자',
+  intro:'피의자는 지인과의 다툼 끝에 폭행을 저지른 혐의로 체포되었습니다. 피해자와는 이미 합의가 이루어진 상태입니다.',
+  defendantStatement:'정말 잘못했습니다. 다시는 이런 일 없을 겁니다.',
+  prosArgument:'폭행 사건이라 하더라도 상해의 정도가 있었던 만큼, 신속한 수사를 위해 구속이 필요하다는 의견입니다.',
+  defArgument:'피의자는 초범이고 이미 피해자와 합의했으며, 주거가 일정하고 직장도 있어 도주나 증거 인멸의 우려가 없습니다.',
+  evidence:[
+    {icon:'📝', name:'합의서', desc:'피해자와 작성한 합의서'},
+    {icon:'🏢', name:'재직증명서', desc:'안정적인 직장 재직 확인'}
+  ],
+  flightRisk:false,
+  evidenceRisk:false
+}
+];
+
 /* ================= Game State ================= */
 let state = {
   caseIdx:-1,
@@ -1973,10 +2409,11 @@ let singleCaseMode = false;
 let tutorialMode = false;
 let caseSelectFilter = 'all';
 
-function renderSuspicion(){
+function renderSuspicion(justIncreased){
   let html='';
   for(let i=0;i<5;i++){
-    html += `<span class="eye ${i<state.suspicion?'on':''}"></span>`;
+    const isLastOn = justIncreased && i===state.suspicion-1;
+    html += `<span class="eye ${i<state.suspicion?'on':''} ${isLastOn?'shake-once':''}"></span>`;
   }
   el('suspicion').innerHTML = html + `<span style="margin-left:6px;font-size:9px;">시민의심 ${state.suspicion}/5</span>`;
 }
@@ -2000,6 +2437,30 @@ function setSpeakerVisual(who){
   });
 }
 
+function playEnterAnimation(){
+  ['pros','def','defendant'].forEach(k=>{
+    const h = el('holder-'+k);
+    if(!h) return;
+    h.classList.remove('enter-anim');
+    void h.offsetWidth;
+    h.classList.add('enter-anim');
+  });
+}
+
+function playObjectionFX(who){
+  const h = el('holder-'+who);
+  if(h){
+    h.classList.remove('objection-flash');
+    void h.offsetWidth;
+    h.classList.add('objection-flash');
+  }
+  const scene = el('scene');
+  const flash = document.createElement('div');
+  flash.className = 'flash-overlay';
+  scene.appendChild(flash);
+  setTimeout(()=>flash.remove(), 320);
+}
+
 /* ---- typewriter dialogue with blips ---- */
 let typingTimer = null;
 let typingFull = '';
@@ -2016,6 +2477,7 @@ function showDialogue(item, cb){
 
   if(item.who==='pros' || item.who==='def'){
     redrawRole(item.who, item.mood||'neutral');
+    if(item.mood==='angry') playObjectionFX(item.who);
   } else if(item.who==='defendant' && item.type==='defendant'){
     redrawRole('defendant', item.mood||'worried');
   }
@@ -2141,6 +2603,7 @@ function nextCase(){
   redrawRole('defendant','worried');
   redrawRole('pros','neutral');
   redrawRole('def','neutral');
+  playEnterAnimation();
   el('evidenceBtn').style.display = c.evidence ? 'inline-block' : 'none';
   el('summaryBtn').style.display = 'inline-block';
   startBGM('ambient', c.tag);
@@ -2203,11 +2666,23 @@ function showLawCard(){
   ov.style.display='flex';
   const nextAction = c.juryVerdict ? 'showJuryVerdict()' : 'proceedToVerdict()';
   const btnLabel = c.juryVerdict ? '배심원 평결 확인' : '판결하기';
+
+  let lawHtml;
+  if(c.charges && c.charges.length){
+    lawHtml = c.charges.map(ch=>`
+      <h2>${ch.article}</h2>
+      <div class="lawtext">${ch.text}</div>
+    `).join('') + `<p style="color:var(--brass-dim);">이 사건은 여러 죄가 함께 인정되는 경합범입니다. 형법 제38조에 따라, 가장 무거운 죄에 정한 형의 장기(또는 다액)에 그 2분의 1까지 가중하되, 각 죄의 형기를 합산한 범위를 넘을 수 없습니다.</p>`;
+  } else {
+    lawHtml = `
+      <h2>${c.law.article}</h2>
+      <div class="lawtext">${c.law.text}</div>
+      <p style="color:var(--brass-dim);">${c.law.note}</p>`;
+  }
+
   ov.innerHTML = `
     <h1>관련 법률</h1>
-    <h2>${c.law.article}</h2>
-    <div class="lawtext">${c.law.text}</div>
-    <p style="color:var(--brass-dim);">${c.law.note}</p>
+    ${lawHtml}
     ${c.precedent ? `<p style="font-size:11px;">📖 ${c.precedent}</p>` : ''}
     <p style="font-size:10px;">${LAW_FOOTNOTE}</p>
     <button class="btn danger" onclick="${nextAction}">${btnLabel}</button>`;
@@ -2234,10 +2709,13 @@ let selectedYears = 0;
 
 function openVerdictPanel(){
   el('yearsPanel').style.display='none';
+  el('extrasPanel').style.display='none';
   el('verdictGrid').style.display='grid';
   el('vTitle').textContent = '최종 판결 - ' + state.currentCase.title;
   el('verdictPanel').style.display='flex';
 }
+
+let pendingPrimaryType = null;
 
 function updateYearsHint(){
   const hintEl = el('yearsHint');
@@ -2245,7 +2723,7 @@ function updateYearsHint(){
   const c = state.currentCase;
   if(!settings.showHint || !c || c.fairMin==null){ hintEl.textContent=''; return; }
   const adj = adjustedRange(c);
-  const score = computeScore('징역', selectedYears||1);
+  const score = computeScore(pendingPrimaryType||'징역', selectedYears||1);
   if(score>=adj.fairMin && score<=adj.fairMax) hintEl.textContent='💡 적정 범위에 근접한 편입니다';
   else if(score < adj.fairMin) hintEl.textContent='💡 다소 가벼운 편일 수 있습니다';
   else hintEl.textContent='💡 다소 무거운 편일 수 있습니다';
@@ -2274,19 +2752,21 @@ function buildNumpad(){
 }
 
 function handleVerdictClick(type){
-  if(type==='사형' || type==='무기징역'){
+  if(type==='사형' || type==='무기징역' || type==='무기금고'){
     showConfirmSevere(type);
     return;
   }
-  if(type==='징역'){
+  if(type==='징역' || type==='금고'){
+    pendingPrimaryType = type;
     selectedYears = 0;
     el('yearsDisplay').textContent = '0 년';
+    el('yearsPanelLabel').textContent = (type==='금고' ? '금고' : '징역') + ' 연수를 입력하세요 (1~50년)';
     buildNumpad();
     updateYearsHint();
     el('verdictGrid').style.display='none';
     el('yearsPanel').style.display='flex';
   } else {
-    resolveVerdict(type, null);
+    proceedToExtras(type, null);
   }
 }
 
@@ -2299,7 +2779,7 @@ function showConfirmSevere(type){
 }
 function confirmSevereYes(type){
   el('overlay').style.display='none';
-  resolveVerdict(type, null);
+  proceedToExtras(type, null);
 }
 function confirmSevereNo(){
   el('overlay').style.display='none';
@@ -2307,7 +2787,7 @@ function confirmSevereNo(){
 
 function confirmYears(){
   if(selectedYears < 1) selectedYears = 1;
-  resolveVerdict('징역', selectedYears);
+  proceedToExtras(pendingPrimaryType, selectedYears);
 }
 
 document.addEventListener('keydown', (e)=>{
@@ -2326,15 +2806,77 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-function resolveVerdict(type, years){
+let pendingResolveType = null;
+let pendingResolveYears = null;
+
+function proceedToExtras(type, years){
+  pendingResolveType = type;
+  pendingResolveYears = years;
+  const c = state.currentCase;
+  const opts = [];
+  if(c.allowsForfeiture) opts.push({key:'forfeiture', label:'몰수 추가 — 범죄에 사용되거나 범죄로 취득한 재산을 몰수'});
+  if(c.qualification){
+    opts.push({key:'suspend', label:`자격정지 추가 — ${c.qualification} 관련 자격을 일정 기간 정지`});
+    opts.push({key:'revoke', label:`자격상실 추가 — ${c.qualification} 관련 자격을 완전히 상실`});
+  }
+  if(!opts.length){
+    resolveVerdict(type, years, {});
+    return;
+  }
+  el('yearsPanel').style.display='none';
+  el('verdictGrid').style.display='none';
+  const box = el('extrasOptions');
+  box.innerHTML = opts.map(o=>`
+    <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;text-align:left;">
+      <input type="checkbox" data-extra="${o.key}" style="margin-top:3px;">
+      <span>${o.label}</span>
+    </label>
+  `).join('');
+  el('extrasPanel').style.display='flex';
+}
+
+el('extrasBack') && el('extrasBack').addEventListener('click', ()=>{
+  el('extrasPanel').style.display='none';
+  el('verdictGrid').style.display='grid';
+});
+el('extrasConfirm') && el('extrasConfirm').addEventListener('click', ()=>{
+  const extras = {};
+  el('extrasOptions').querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    if(cb.checked) extras[cb.dataset.extra] = true;
+  });
+  el('extrasPanel').style.display='none';
+  resolveVerdict(pendingResolveType, pendingResolveYears, extras);
+});
+
+function playGavelSlamFX(){
+  const scene = el('scene');
+  const g = document.createElement('div');
+  g.className = 'gavel-icon';
+  g.textContent = '🔨';
+  scene.appendChild(g);
+  el('stage').classList.add('shake');
+  setTimeout(()=>{ g.remove(); el('stage').classList.remove('shake'); }, 550);
+}
+
+function vibrateFor(type, years){
+  if(!navigator.vibrate) return;
+  const score = computeScore(type, years);
+  if(score >= 14) navigator.vibrate([80,50,80,50,200]);
+  else if(score >= 6) navigator.vibrate([120,40,120]);
+  else navigator.vibrate(60);
+}
+
+function resolveVerdict(type, years, extras){
   const c = state.currentCase;
   el('verdictPanel').style.display='none';
   playGavel();
+  playGavelSlamFX();
+  vibrateFor(type, years);
   state._lastElapsedMs = Date.now() - (state._caseStartTime || Date.now());
   const outcome = judge(c, type, years);
   const mood = defendantMoodFor(outcome, type);
   redrawRole('defendant', mood);
-  setTimeout(()=>{ showResultOverlay(type, years, outcome); }, 900);
+  setTimeout(()=>{ showResultOverlay(type, years, outcome, extras||{}); }, 900);
 }
 
 function judge(c, type, years){
@@ -2405,6 +2947,7 @@ async function showArchive(){
   ov.innerHTML = `<h1>재판 기록</h1><p>불러오는 중...</p>`;
   let records = [];
   let achievements = [];
+  let warrantRuns = [];
   try{
     const res = await window.storage.get('archive', false);
     if(res && res.value) records = JSON.parse(res.value);
@@ -2413,29 +2956,43 @@ async function showArchive(){
     const res2 = await window.storage.get('achievements', false);
     if(res2 && res2.value) achievements = JSON.parse(res2.value);
   }catch(e){ achievements = []; }
-  renderArchive(records, achievements);
+  try{
+    const res3 = await window.storage.get('warrantArchive', false);
+    if(res3 && res3.value) warrantRuns = JSON.parse(res3.value);
+  }catch(e){ warrantRuns = []; }
+  renderArchive(records, achievements, warrantRuns);
 }
-function renderArchive(records, achievements){
+function renderArchive(records, achievements, warrantRuns){
   achievements = achievements || [];
+  warrantRuns = warrantRuns || [];
   const ov = el('overlay');
   const badgeNames = achievements.map(id=>{
     const a = ACHIEVEMENTS.find(x=>x.id===id);
-    return a ? a.name : id;
+    return a ? `${a.icon||'🏅'} ${a.name}` : id;
   });
   const badgeHtml = badgeNames.length ? `<div class="lawtext">🏅 획득한 업적<br>${badgeNames.join(', ')}</div>` : '';
+
+  let warrantHtml = '';
+  if(warrantRuns.length){
+    const totalCases = warrantRuns.reduce((s,r)=>s+r.total,0);
+    const totalCorrect = warrantRuns.reduce((s,r)=>s+r.correct,0);
+    warrantHtml = `<div class="lawtext">⚖️ 구속영장 실질심사 누적 기록<br>총 ${warrantRuns.length}회 진행 · ${totalCases}건 중 ${totalCorrect}건 적절 판단 (${Math.round(totalCorrect/totalCases*100)}%)</div>`;
+  }
+
   if(!records.length){
-    ov.innerHTML = `<h1>재판 기록</h1>${badgeHtml}<p>아직 기록된 재판이 없습니다.</p><button class="btn secondary" onclick="showTitle()">돌아가기</button>`;
+    ov.innerHTML = `<h1>재판 기록</h1>${badgeHtml}${warrantHtml}<p>아직 기록된 재판이 없습니다.</p><button class="btn secondary" onclick="showTitle()">돌아가기</button>`;
     return;
   }
   const rows = records.slice(-30).reverse().map(r=>`
     <div class="archiveRow"><b>${r.title}</b><br>선고: ${r.verdict} · 결과: ${r.resultLabel}${r.elapsedMs ? ` · ⏱ ${(r.elapsedMs/1000).toFixed(1)}초` : ''}</div>
   `).join('');
-  ov.innerHTML = `<h1>재판 기록</h1>${badgeHtml}<div style="max-height:280px;overflow-y:auto;width:100%;max-width:340px;">${rows}</div>
+  ov.innerHTML = `<h1>재판 기록</h1>${badgeHtml}${warrantHtml}<div style="max-height:280px;overflow-y:auto;width:100%;max-width:340px;">${rows}</div>
     <button class="btn secondary" onclick="clearArchive()">기록 초기화</button>
     <button class="btn" onclick="showTitle()">돌아가기</button>`;
 }
 async function clearArchive(){
   try{ await window.storage.delete('archive', false); }catch(e){}
+  try{ await window.storage.delete('warrantArchive', false); }catch(e){}
   showArchive();
 }
 
@@ -2445,8 +3002,8 @@ function showEvidence(){
   if(!c || !c.evidence) return;
   const ov = el('overlay');
   ov.style.display='flex';
-  const items = c.evidence.map(e=>`
-    <div class="evidenceCard">
+  const items = c.evidence.map((e,i)=>`
+    <div class="evidenceCard flip-in" style="animation-delay:${i*0.12}s;">
       <div style="font-size:20px;">${e.icon} <b style="font-size:13px;">${e.name}</b></div>
       <div style="font-size:12px;color:var(--parchment-dim);margin-top:4px;">${e.desc}</div>
     </div>
@@ -2496,6 +3053,11 @@ function showSettings(){
       <button class="btn secondary small" onclick="setHint(false)">${t('hintOff')}</button>
       <button class="btn secondary small" onclick="setHint(true)">${t('hintOn')}</button>
     </div>
+    <p style="font-size:11px;margin-top:16px;">고대비 테마 (시인성 강화)</p>
+    <div class="btnrow">
+      <button class="btn secondary small" onclick="setContrast(false)">기본</button>
+      <button class="btn secondary small" onclick="setContrast(true)">고대비</button>
+    </div>
     <p style="font-size:11px;margin-top:16px;">${t('settingsLang')}</p>
     <div class="btnrow">
       <button class="btn secondary small" onclick="setLang('ko')">한국어</button>
@@ -2512,6 +3074,11 @@ function setFontScale(big){
   saveSettings();
 }
 function setHint(v){ settings.showHint=v; saveSettings(); }
+function setContrast(v){
+  settings.highContrast = v;
+  el('stage').classList.toggle('high-contrast', v);
+  saveSettings();
+}
 
 /* ================= Appeal event ================= */
 function showAppealEvent(outcome){
@@ -2553,10 +3120,11 @@ function newspaperHTML(h){
 }
 
 /* ================= Result / overlays ================= */
-function showResultOverlay(type, years, outcome){
+function showResultOverlay(type, years, outcome, extras){
+  extras = extras || {};
   const ov = el('overlay');
   ov.style.display='flex';
-  const label = verdictLabel(type, years);
+  const label = verdictLabel(type, years, extras);
   const c = state.currentCase;
   const wasAppealFlag = state._appealUsed;
 
@@ -2566,7 +3134,8 @@ function showResultOverlay(type, years, outcome){
 
   if(outcome.kind === 'distortion_innocent'){
     stopBGM();
-    ov.innerHTML = `${npHtml}
+    ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
+      <div class="stamp">파기</div>
       <h1>THE END</h1>
       <h2>법왜곡죄 - 패배</h2>
       <p>선고: <b>${label}</b></p>
@@ -2576,7 +3145,8 @@ function showResultOverlay(type, years, outcome){
   }
   if(outcome.kind === 'distortion_illegal'){
     stopBGM();
-    ov.innerHTML = `${npHtml}
+    ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
+      <div class="stamp">파기</div>
       <h1>THE END</h1>
       <h2>법왜곡죄 - 패배</h2>
       <p>선고: <b>${label}</b></p>
@@ -2589,7 +3159,8 @@ function showResultOverlay(type, years, outcome){
     const reason = outcome.kind==='distortion_harsh'
       ? '죄질에 비해 지나치게 가혹한 판결이라는 여론이 들끓었습니다.'
       : '중대한 범죄에 비해 지나치게 관대한 판결이라는 비판이 쏟아졌습니다.';
-    ov.innerHTML = `${npHtml}
+    ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
+      <div class="stamp">파기</div>
       <h1>THE END</h1>
       <h2>법왜곡죄 - 패배</h2>
       <p>선고: <b>${label}</b></p>
@@ -2600,6 +3171,7 @@ function showResultOverlay(type, years, outcome){
   if(outcome.kind === 'correct_acquittal'){
     pushHistory(c, type, years, outcome);
     ov.innerHTML = `${npHtml}
+      <div class="stamp" style="border-color:var(--ok);color:var(--ok);">무죄</div>
       <h2>무죄 선고</h2>
       <p>알리바이와 증거를 근거로 냉정하게 판단한 정당한 무죄 판결입니다. 무고한 시민이 억울한 옥살이를 면했습니다.</p>
       <button class="btn" onclick="proceedNext()">다음 사건으로</button>`;
@@ -2632,6 +3204,14 @@ function showResultOverlay(type, years, outcome){
     }
   }
 
+  if(extras.forfeiture || extras.suspend || extras.revoke){
+    const extraNotes = [];
+    if(extras.forfeiture) extraNotes.push('범죄에 사용되거나 취득한 재산이 몰수되었습니다.');
+    if(extras.suspend) extraNotes.push('관련 자격이 일정 기간 정지되었습니다.');
+    if(extras.revoke) extraNotes.push('관련 자격을 완전히 상실했습니다.');
+    messages.push(`<p style="color:var(--brass-dim);">${extraNotes.join(' ')}</p>`);
+  }
+
   if(!wasAppealFlag && (outcome.kind==='mild_lenient'||outcome.kind==='mild_harsh') && Math.random()<0.4){
     state._appealUsed = true;
     state._appealShown = true;
@@ -2642,11 +3222,12 @@ function showResultOverlay(type, years, outcome){
   pushHistory(c, type, years, outcome);
 
   state.suspicion = Math.min(5, state.suspicion + bump);
-  if(bump>0) renderSuspicion();
+  if(bump>0) renderSuspicion(true);
 
   if(state.suspicion >= 5){
     stopBGM();
-    ov.innerHTML = `${npHtml}
+    ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
+      <div class="stamp">파면</div>
       <h1>THE END</h1>
       <h2>신뢰를 잃은 판사 - 패배</h2>
       ${messages.join('')}
@@ -2657,6 +3238,7 @@ function showResultOverlay(type, years, outcome){
   }
 
   ov.innerHTML = `${npHtml}
+    <div class="stamp">선고</div>
     <h2>선고 완료</h2>
     <p>선고: <b>${label}</b></p>
     ${messages.join('')}
@@ -2699,7 +3281,7 @@ function generateShareCard(){
   ctx.fillText(`처리 사건: ${activeCaseList.length}건`, 240, 240);
   ctx.fillText(`시민의심: ${state.suspicion}/5`, 240, 275);
   ctx.font='11px monospace'; ctx.fillStyle='#8a6d33';
-  ctx.fillText('ver 2.0 · 제작: 최한민', 240, 600);
+  ctx.fillText('ver 3.5 · 제작: 최한민', 240, 600);
   const url = canvas.toDataURL('image/png');
   const ov = el('overlay');
   ov.innerHTML = `<h1>결과 카드</h1>
@@ -2709,13 +3291,14 @@ function generateShareCard(){
 }
 
 function downloadJudgmentDocument(){
-  let text = '=== 미니법정 판결문 모음 (ver 2.0) ===\n\n';
+  let text = '=== 미니법정 판결문 모음 (ver 3.5) ===\n\n';
   state.history.forEach((h,i)=>{
     const c = CASES.find(cc=>cc.id===h.caseId);
     text += `사건번호: 2026고합${1000+i}\n`;
     text += `사건명: ${c ? c.title : h.caseId}\n`;
     text += `주문: ${verdictLabel(h.type,h.years)}\n`;
-    text += `이유: ${c ? c.law.article : ''} 등 관련 법리와 공판정에서의 심리 결과를 종합하여 위와 같이 주문한다.\n`;
+    const lawRef = c ? (c.charges && c.charges.length ? c.charges.map(ch=>ch.article).join(', ') : c.law.article) : '';
+    text += `이유: ${lawRef} 등 관련 법리와 공판정에서의 심리 결과를 종합하여 위와 같이 주문한다.\n`;
     text += `\n----------------------------------------\n\n`;
   });
   const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
@@ -2749,14 +3332,31 @@ function showEnding(){
 
   ov.innerHTML = `
     <h1>재판 종료</h1>
+    ${judgeName ? `<p style="color:var(--brass);">${judgeName} 판사님</p>` : ''}
     <h2>등급: ${grade}</h2>
     <p>성향 분석: <b>${profile}</b></p>
     <p>총 ${activeCaseList.length}건의 재판을 무사히 마쳤습니다. 최종 시민의심 수치: ${state.suspicion}/5</p>
     ${fastestHtml}
-    ${earned.length ? `<div class="lawtext">🏅 이번 재판에서 획득한 업적<br>${earned.map(a=>`${a.name} - ${a.desc}`).join('<br>')}</div>` : ''}
+    ${earned.length ? `<div class="lawtext">🏅 이번 재판에서 획득한 업적<br>${earned.map(a=>`${a.icon||'🏅'} ${a.name} - ${a.desc}`).join('<br>')}</div>` : ''}
     <button class="btn" onclick="generateShareCard()">🖼 결과 카드 만들기</button>
     <button class="btn secondary" onclick="downloadJudgmentDocument()">📄 판결문 다운로드</button>
     <button class="btn secondary" onclick="restartGame()">처음 화면으로</button>`;
+  if(grade==='명판사') spawnConfetti();
+}
+
+function spawnConfetti(){
+  const stage = el('stage');
+  const colors = ['#c9a24b','#a83c4a','#4a7a4a','#3a5a86','#ece1c4'];
+  for(let i=0;i<26;i++){
+    const d = document.createElement('div');
+    d.className = 'confetti';
+    d.style.left = (Math.random()*100)+'%';
+    d.style.background = colors[Math.floor(Math.random()*colors.length)];
+    d.style.animationDelay = (Math.random()*0.6)+'s';
+    d.style.animationDuration = (1.8+Math.random()*0.8)+'s';
+    stage.appendChild(d);
+    setTimeout(()=>d.remove(), 3000);
+  }
 }
 
 function restartGame(){
@@ -2767,6 +3367,7 @@ function restartGame(){
 function showTitle(){
   el('evidenceBtn').style.display='none';
   el('summaryBtn').style.display='none';
+  document.querySelectorAll('.end-vignette,.confetti').forEach(e=>e.remove());
   stopBGM();
   syncHudLabels();
   const ov = el('overlay');
@@ -2775,11 +3376,12 @@ function showTitle(){
     <h1>미니법정</h1>
     <p>당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.</p>
     <p style="font-size:11px;color:var(--parchment-dim);">무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br><br>죄를 지은 자를 함부로 풀어주면<br>시민들의 의심을 사게 됩니다.</p>
-    <button class="btn" onclick="showDifficultySelect()">${t('startTrial')}</button>
+    <button class="btn" onclick="handleStartTrialClick()">${t('startTrial')}</button>
+    <button class="btn secondary" onclick="handleStartWarrantClick()">⚖️ 구속영장 실질심사 시작</button>
     <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
     <div class="credit">제작자: 최한민</div>
-    <div class="verline">ver 2.0</div>`;
+    <div class="verline">ver 3.5</div>`;
 }
 
 function showDifficultySelect(){
@@ -2833,6 +3435,236 @@ function showCaseSelect(filter){
   ov.innerHTML = `<h1>${t('caseSelectTitle')}</h1><p style="font-size:11px;">${t('caseSelectPrompt')}</p>${filterBtns}${items}<button class="btn secondary" onclick="showModeSelect()">${t('back')}</button>`;
 }
 
+/* ================= 구속영장 실질심사 모드 ================= */
+let warrantState = { list:[], idx:-1, results:[], abuseCount:0, leniencyCount:0 };
+let warrantQueue = [];
+let warrantPos = 0;
+
+const WARRANT_ABUSE_LINES = [
+  '"무고한 사람을 가두다니, 저게 판사가 맞습니까?"',
+  '"이 판사는 영장을 남발합니다."',
+  '"인신구속을 장난으로 아는 것 같습니다."',
+  '"저러다 죄 없는 사람 다 잡아가겠네."',
+  '"판사가 아니라 저건 폭주하는 권력입니다."'
+];
+const WARRANT_LENIENCY_LINES = [
+  '"저 판사, 혹시 피고인이랑 짜고 치는 거 아닙니까?"',
+  '"위험한 사람을 풀어주다니 제정신입니까?"',
+  '"시민의 안전보다 범죄자 인권이 먼저입니까?"',
+  '"혹시 당신도 피고인과 공범입니까?"',
+  '"저 판사 뒤를 봐줘야 하는 거 아닌가 싶습니다."'
+];
+
+function showWarrantIntro(){
+  el('evidenceBtn').style.display='none';
+  el('summaryBtn').style.display='none';
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `
+    <h1>구속영장 실질심사</h1>
+    <p style="font-size:12px;">경찰이나 검사가 체포·구속영장을 청구하면, 판사는 피의자를 직접 불러 심문한 뒤(구속 전 피의자 심문) 구속 여부를 결정합니다.</p>
+    <div class="lawtext" style="text-align:left;">
+      판사는 다음을 종합적으로 살펴 구속 여부를 판단합니다.<br><br>
+      1. 죄를 범했다고 의심할 만한 상당한 이유가 있는가<br>
+      2. 주거가 일정한가<br>
+      3. 증거를 인멸할 우려가 있는가<br>
+      4. 도망하거나 도망할 우려가 있는가<br><br>
+      + 범죄의 중대성, 재범의 위험성, 피해자·중요 참고인에 대한 위해 우려도 함께 고려합니다.
+    </div>
+    <p style="font-size:11px;color:var(--parchment-dim);">(형사소송법 제70조) 이 중 하나라도 인정되어야 구속영장을 인용할 수 있습니다.<br>무고한 사람을 함부로 가두거나, 위험한 사람을 함부로 풀어주면 대가가 따릅니다.</p>
+    <button class="btn danger" onclick="startWarrantMode()">심사 시작하기</button>
+    <button class="btn secondary" onclick="showTitle()">뒤로</button>`;
+}
+
+function startWarrantMode(){
+  ensureAudio();
+  warrantState = { list: shuffleArr(WARRANT_CASES.slice()), idx:-1, results:[], abuseCount:0, leniencyCount:0 };
+  el('overlay').style.display='none';
+  nextWarrantCase();
+}
+
+function nextWarrantCase(){
+  warrantState.idx++;
+  if(warrantState.idx >= warrantState.list.length){
+    el('evidenceBtn').style.display='none';
+    el('summaryBtn').style.display='none';
+    stopBGM();
+    showWarrantSummary();
+    return;
+  }
+  const w = warrantState.list[warrantState.idx];
+  warrantState.current = w;
+  state.currentCase = w; // 증거 뷰어 재사용을 위함
+  el('caseLabel').textContent = w.title;
+  el('evidenceBtn').style.display = w.evidence ? 'inline-block' : 'none';
+  el('summaryBtn').style.display = 'none';
+  const holder = el('holder-defendant');
+  holder.classList.remove('dragged-away','happy-bounce');
+  redrawRole('defendant','worried');
+  redrawRole('pros','neutral');
+  redrawRole('def','neutral');
+  startBGM('ambient');
+  playDoorSfx();
+  warrantQueue = [
+    {type:'narrator', name:'나레이션', text:w.intro, who:'defendant'},
+    {type:'defendant', name:'피의자', text:w.defendantStatement, who:'defendant', mood:'worried'},
+    {type:'prosecutor', name:'검사', text:w.prosArgument, who:'pros', mood:'neutral'},
+    {type:'defense', name:'변호인', text:w.defArgument, who:'def', mood:'worried'}
+  ];
+  warrantPos = 0;
+  playWarrantQueue();
+}
+
+function playWarrantQueue(){
+  if(warrantPos >= warrantQueue.length){
+    showWarrantDecisionPanel();
+    return;
+  }
+  const item = warrantQueue[warrantPos];
+  showDialogue(item, ()=>{
+    warrantPos++;
+    playWarrantQueue();
+  });
+}
+
+function showWarrantDecisionPanel(){
+  el('dialogueBox').style.display='none';
+  setSpeakerVisual(null);
+  el('evidenceBtn').style.display='none';
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `
+    <h1>구속 여부 판단</h1>
+    <p style="font-size:12px;">형사소송법 제70조는 주거부정·증거인멸 우려·도주 우려가 있을 때 구속할 수 있다고 정합니다. 인정되는 사유를 체크한 뒤 결정하세요.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0;text-align:left;width:100%;max-width:320px;">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;"><input type="checkbox" id="wFlight"> <span>도주 우려가 있다고 인정</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;"><input type="checkbox" id="wEvidence"> <span>증거 인멸 우려가 있다고 인정</span></label>
+    </div>
+    <div id="wWarning" style="color:var(--danger);font-size:11px;min-height:14px;"></div>
+    <div class="btnrow">
+      <button class="btn danger" onclick="decideWarrant('인용')">구속영장 인용</button>
+      <button class="btn secondary" onclick="decideWarrant('기각')">기각</button>
+    </div>`;
+}
+
+function spawnFloatingEmoji(emoji){
+  const scene = el('scene');
+  const span = document.createElement('div');
+  span.className = 'float-emoji';
+  span.textContent = emoji;
+  scene.appendChild(span);
+  setTimeout(()=>{ span.remove(); }, 1500);
+}
+
+function showDefendantReaction(decision){
+  const holder = el('holder-defendant');
+  holder.classList.remove('dragged-away','happy-bounce');
+  void holder.offsetWidth; // 애니메이션 재시작을 위한 리플로우
+  if(decision==='인용'){
+    redrawRole('defendant','distressed');
+    holder.classList.add('dragged-away');
+    spawnFloatingEmoji('😢');
+    playCrowdReaction('gasp');
+  } else {
+    redrawRole('defendant','relieved');
+    holder.classList.add('happy-bounce');
+    spawnFloatingEmoji('🙌');
+    playCrowdReaction('cheer');
+  }
+}
+
+function decideWarrant(decision){
+  const w = warrantState.current;
+  const flightChecked = el('wFlight').checked;
+  const evidenceChecked = el('wEvidence').checked;
+  if(decision==='인용' && !flightChecked && !evidenceChecked){
+    el('wWarning').textContent = '최소 하나의 구속 사유를 인정해야 구속영장을 인용할 수 있습니다.';
+    return;
+  }
+  const actualRisk = w.flightRisk || w.evidenceRisk;
+  let kind;
+  if(decision==='인용') kind = actualRisk ? 'warrant_correct_grant' : 'warrant_overreach';
+  else kind = actualRisk ? 'warrant_missed_risk' : 'warrant_correct_deny';
+  warrantState.results.push({title:w.title, decision, kind});
+
+  if(kind==='warrant_overreach') warrantState.abuseCount++;
+  if(kind==='warrant_missed_risk') warrantState.leniencyCount++;
+
+  el('overlay').style.display='none';
+  playGavel();
+  playGavelSlamFX();
+  if(navigator.vibrate) navigator.vibrate(decision==='인용' ? [100,50,100] : 60);
+  showDefendantReaction(decision);
+  setTimeout(()=>{ showWarrantResult(kind); }, 1400);
+}
+
+function showWarrantResult(kind){
+  const ov = el('overlay');
+  ov.style.display='flex';
+
+  if(kind==='warrant_overreach' && warrantState.abuseCount>=3){
+    stopBGM();
+    ov.innerHTML = `<div class="end-vignette"></div>
+      <div class="stamp">파면</div>
+      <h1>THE END</h1>
+      <h2>판사의 이미지가 나락으로 가고 있습니다</h2>
+      <p>${WARRANT_ABUSE_LINES[Math.floor(Math.random()*WARRANT_ABUSE_LINES.length)]}</p>
+      <p>무고한 사람을 세 차례나 구속시킨 당신은, 결국 "판사가 미쳤다"는 평가와 함께 인신구속권을 남용했다는 낙인이 찍혀 자리에서 물러나야 했습니다.</p>
+      <button class="btn" onclick="showTitle()">처음 화면으로</button>`;
+    return;
+  }
+  if(kind==='warrant_missed_risk' && warrantState.leniencyCount>=3){
+    stopBGM();
+    ov.innerHTML = `<div class="end-vignette"></div>
+      <div class="stamp">파면</div>
+      <h1>THE END</h1>
+      <h2>시민들의 분노가 폭발했습니다</h2>
+      <p>${WARRANT_LENIENCY_LINES[Math.floor(Math.random()*WARRANT_LENIENCY_LINES.length)]}</p>
+      <p>위험성이 뚜렷한 피의자를 세 차례나 풀어준 당신은, 결국 시민의 신뢰를 완전히 잃고 자리에서 물러나야 했습니다.</p>
+      <button class="btn" onclick="showTitle()">처음 화면으로</button>`;
+    return;
+  }
+
+  let heading, msg, warnLine = '';
+  const stampText = warrantState.results[warrantState.results.length-1].decision;
+  const stampColor = kind.indexOf('correct')>=0 ? 'var(--ok)' : 'var(--danger)';
+  if(kind==='warrant_correct_grant'){
+    heading='적절한 구속 판단'; msg='실제로 도주 또는 증거 인멸의 우려가 있었던 사안으로, 구속영장 발부가 적절했다는 평가입니다.';
+  } else if(kind==='warrant_correct_deny'){
+    heading='정당한 기각'; msg='뚜렷한 구속 사유가 없어, 불구속 수사 원칙에 부합하는 결정이었습니다.';
+  } else if(kind==='warrant_overreach'){
+    heading='과잉 구속 논란';
+    msg='실제로는 도주나 증거 인멸의 우려가 없었던 무고한 사안이었습니다. 신체의 자유를 과도하게 제한했다는 비판을 받았습니다.';
+    warnLine = `<p style="color:var(--danger);">${WARRANT_ABUSE_LINES[Math.floor(Math.random()*WARRANT_ABUSE_LINES.length)]}<br>⚠️ 무리한 구속 경고 (${warrantState.abuseCount}/3)</p>`;
+  } else {
+    heading='우려가 방치됨';
+    msg='실제로 도주 또는 증거 인멸의 우려가 있었던 사안이었으나 기각되어, 이후 문제가 발생했습니다.';
+    warnLine = `<p style="color:var(--danger);">${WARRANT_LENIENCY_LINES[Math.floor(Math.random()*WARRANT_LENIENCY_LINES.length)]}<br>⚠️ 방치 경고 (${warrantState.leniencyCount}/3)</p>`;
+  }
+  ov.innerHTML = `<div class="stamp" style="border-color:${stampColor};color:${stampColor};">${stampText}</div><h1>${heading}</h1><p>${msg}</p>${warnLine}<button class="btn" onclick="nextWarrantCase()">다음 심사로</button>`;
+}
+
+async function saveWarrantResults(results, correct){
+  try{
+    let all = [];
+    try{
+      const res = await window.storage.get('warrantArchive', false);
+      if(res && res.value) all = JSON.parse(res.value);
+    }catch(e){ all = []; }
+    all.push({ts:Date.now(), total:results.length, correct, items:results.map(r=>({title:r.title, decision:r.decision, kind:r.kind}))});
+    await window.storage.set('warrantArchive', JSON.stringify(all), false);
+  }catch(e){}
+}
+
+function showWarrantSummary(){
+  const results = warrantState.results;
+  const correct = results.filter(r=>r.kind==='warrant_correct_grant'||r.kind==='warrant_correct_deny').length;
+  saveWarrantResults(results, correct);
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `<h1>영장실질심사 종료</h1><p>총 ${results.length}건 중 ${correct}건을 적절하게 판단했습니다.</p><button class="btn" onclick="showTitle()">처음 화면으로</button>`;
+}
+
 /* ================= Init ================= */
 document.querySelectorAll('.vbtn').forEach(b=>{
   b.addEventListener('click', ()=>handleVerdictClick(b.dataset.v));
@@ -2855,6 +3687,7 @@ initSprites();
 renderSuspicion();
 renderGauge();
 loadSettings();
+loadJudgeName();
 showTitle();
 </script>
 </body>

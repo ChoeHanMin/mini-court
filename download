@@ -1,0 +1,51 @@
+import { create } from 'zustand';
+import casesData from '../data/cases.json';
+import { judge, computeScore } from '../logic/judge.js';
+
+// 원본 HTML 버전의 state 객체를 zustand 스토어로 옮긴 것입니다.
+// 아직 대사 큐/사운드/애니메이션은 포함하지 않은 "핵심 상태만" 있는 뼈대입니다.
+
+export const useGameStore = create((set, get) => ({
+  cases: casesData,
+  caseIdx: -1,
+  currentCase: null,
+  suspicion: 0,
+  difficulty: 'normal',
+  history: [],
+
+  setDifficulty: (level) => set({ difficulty: level }),
+
+  startGame: () => set({
+    caseIdx: -1,
+    suspicion: 0,
+    history: []
+  }),
+
+  nextCase: () => {
+    const { caseIdx, cases } = get();
+    const newIdx = caseIdx + 1;
+    if (newIdx >= cases.length) {
+      set({ currentCase: null, caseIdx: newIdx });
+      return null; // 게임 종료 신호 - 컴포넌트에서 엔딩 화면으로 전환
+    }
+    const c = cases[newIdx];
+    set({ caseIdx: newIdx, currentCase: c });
+    return c;
+  },
+
+  submitVerdict: (type, years) => {
+    const { currentCase, difficulty, suspicion, history } = get();
+    const outcome = judge(currentCase, type, years, difficulty);
+    const score = type === '무죄' ? 0 : computeScore(type, years);
+
+    let newSuspicion = suspicion;
+    if (outcome.kind === 'suspicion') newSuspicion = Math.min(5, suspicion + 1);
+
+    set({
+      suspicion: newSuspicion,
+      history: [...history, { caseId: currentCase.id, type, years, score, outcomeKind: outcome.kind }]
+    });
+
+    return outcome;
+  }
+}));

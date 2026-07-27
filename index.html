@@ -80,7 +80,7 @@
   #suspicion{display:flex;gap:3px;align-items:center;}
   .eye{width:10px;height:10px;background:#3a3a3a;border:1px solid #111;}
   .eye.on{background:var(--danger);box-shadow:0 0 4px var(--danger);}
-  #muteBtn,#evidenceBtn,#settingsBtn,#summaryBtn{
+  #muteBtn,#evidenceBtn,#settingsBtn,#summaryBtn,#homeBtn{
     background:none;border:1px solid var(--brass-dim);color:var(--parchment-dim);
     font-size:10px;padding:3px 6px;cursor:pointer;font-family:inherit;
   }
@@ -386,6 +386,7 @@
       <button id="summaryBtn" style="display:none;">📜 요약</button>
       <button id="settingsBtn">⚙</button>
       <button id="muteBtn">🔊 소리</button>
+      <button id="homeBtn">🏠 첫 화면</button>
     </div>
   </div>
 
@@ -462,7 +463,7 @@
 
 <script>
 /* ============================================================
-   미니법정 - Mini Court  ver 3.5
+   미니법정 - Mini Court  ver 3.6
    제작자: 최한민
    ============================================================ */
 
@@ -477,6 +478,14 @@ async function loadJudgeName(){
 async function saveJudgeName(name){
   judgeName = name;
   try{ await window.storage.set('judgeName', name, false); }catch(e){}
+}
+function withJudgeOpening(text){
+  if(!judgeName) return text;
+  return `존경하는 ${judgeName} 판사님, ${text}`;
+}
+function withJudgeClosing(text, requestPhrase){
+  if(!judgeName) return text;
+  return `${text} ${requestPhrase}, ${judgeName} 판사님.`;
 }
 function showNameInput(onDone){
   const ov = el('overlay');
@@ -2630,17 +2639,17 @@ function buildDialogueQueue(c){
     }
   }
   q.push({type:'narrator', name:'나레이션', text:c.intro, who:'defendant'});
-  q.push({type:'prosecutor', name:'검사', text:c.prosOpen, who:'pros', mood:'neutral'});
-  q.push({type:'defense', name:'변호인', text:c.defOpen, who:'def', mood:'worried'});
+  q.push({type:'prosecutor', name:'검사', text:withJudgeOpening(c.prosOpen), who:'pros', mood:'neutral'});
+  q.push({type:'defense', name:'변호인', text:withJudgeOpening(c.defOpen), who:'def', mood:'worried'});
   c.rounds.forEach((r,i)=>{
     const escalate = i >= Math.ceil(c.rounds.length/2);
     q.push({type:'prosecutor', name:'검사', text:r.p, who:'pros', mood: escalate?'angry':'neutral'});
     q.push({type:'defense', name:'변호인', text:r.d, who:'def', mood: escalate?'worried':'neutral', shift:r.momentum});
   });
-  q.push({type:'prosecutor', name:'검사 (구형)', text:c.prosFinal, who:'pros', mood:'angry'});
-  q.push({type:'defense', name:'변호인 (최후 변론)', text:c.defFinal, who:'def', mood:'worried'});
+  q.push({type:'prosecutor', name:'검사 (구형)', text:withJudgeClosing(c.prosFinal, '엄중한 처벌을 부탁드립니다'), who:'pros', mood:'angry'});
+  q.push({type:'defense', name:'변호인 (최후 변론)', text:withJudgeClosing(c.defFinal, '부디 선처를 부탁드립니다'), who:'def', mood:'worried'});
   q.push({type:'narrator', name:'나레이션', text:'재판장이 피고인에게 마지막 진술 기회를 줍니다.', who:'defendant'});
-  q.push({type:'defendant', name:'피고인', text:c.finalStatement, who:'defendant', mood:'worried'});
+  q.push({type:'defendant', name:'피고인', text: judgeName ? `${judgeName} 판사님... ${c.finalStatement}` : c.finalStatement, who:'defendant', mood:'worried'});
 
   if(c.rounds.length>=2 && Math.random()<0.3){
     const ev = RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)];
@@ -3289,7 +3298,7 @@ function generateShareCard(){
   ctx.fillText(`처리 사건: ${activeCaseList.length}건`, 240, 240);
   ctx.fillText(`시민의심: ${state.suspicion}/5`, 240, 275);
   ctx.font='11px monospace'; ctx.fillStyle='#8a6d33';
-  ctx.fillText('ver 3.5 · 제작: 최한민', 240, 600);
+  ctx.fillText('ver 3.6 · 제작: 최한민', 240, 600);
   const url = canvas.toDataURL('image/png');
   const ov = el('overlay');
   ov.innerHTML = `<h1>결과 카드</h1>
@@ -3299,7 +3308,7 @@ function generateShareCard(){
 }
 
 function downloadJudgmentDocument(){
-  let text = '=== 미니법정 판결문 모음 (ver 3.5) ===\n\n';
+  let text = '=== 미니법정 판결문 모음 (ver 3.6) ===\n\n';
   state.history.forEach((h,i)=>{
     const c = CASES.find(cc=>cc.id===h.caseId);
     text += `사건번호: 2026고합${1000+i}\n`;
@@ -3371,6 +3380,31 @@ function restartGame(){
   showTitle();
 }
 
+function confirmReturnToTitle(){
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `<h1>확인</h1><p>정말 첫 화면으로 돌아가시겠습니까?<br>진행 중인 재판 내용은 저장되지 않습니다.</p>
+    <button class="btn danger" onclick="forceReturnToTitle()">예, 나갑니다</button>
+    <button class="btn secondary" onclick="cancelReturnToTitle()">아니오</button>`;
+}
+function cancelReturnToTitle(){
+  el('overlay').style.display='none';
+}
+function forceReturnToTitle(){
+  clearInterval(typingTimer);
+  isTyping = false;
+  stopBGM();
+  el('verdictPanel').style.display='none';
+  el('yearsPanel').style.display='none';
+  el('extrasPanel').style.display='none';
+  el('dialogueBox').style.display='none';
+  el('evidenceBtn').style.display='none';
+  el('summaryBtn').style.display='none';
+  tutorialMode = false;
+  singleCaseMode = false;
+  showTitle();
+}
+
 /* ================= Menus ================= */
 function showTitle(){
   el('evidenceBtn').style.display='none';
@@ -3389,7 +3423,7 @@ function showTitle(){
     <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
     <div class="credit">제작자: 최한민</div>
-    <div class="verline">ver 3.5</div>`;
+    <div class="verline">ver 3.6</div>`;
 }
 
 function showDifficultySelect(){
@@ -3518,9 +3552,9 @@ function nextWarrantCase(){
   playDoorSfx();
   warrantQueue = [
     {type:'narrator', name:'나레이션', text:w.intro, who:'defendant'},
-    {type:'defendant', name:'피의자', text:w.defendantStatement, who:'defendant', mood:'worried'},
-    {type:'prosecutor', name:'검사', text:w.prosArgument, who:'pros', mood:'neutral'},
-    {type:'defense', name:'변호인', text:w.defArgument, who:'def', mood:'worried'}
+    {type:'defendant', name:'피의자', text: judgeName ? `${judgeName} 판사님... ${w.defendantStatement}` : w.defendantStatement, who:'defendant', mood:'worried'},
+    {type:'prosecutor', name:'검사', text:withJudgeOpening(w.prosArgument), who:'pros', mood:'neutral'},
+    {type:'defense', name:'변호인', text:withJudgeClosing(w.defArgument, '기각해 주시기를 부탁드립니다'), who:'def', mood:'worried'}
   ];
   warrantPos = 0;
   playWarrantQueue();
@@ -3693,6 +3727,7 @@ el('muteBtn').addEventListener('click', ()=>{
 el('evidenceBtn').addEventListener('click', showEvidence);
 el('summaryBtn').addEventListener('click', showSummary);
 el('settingsBtn').addEventListener('click', showSettings);
+el('homeBtn').addEventListener('click', confirmReturnToTitle);
 
 initSprites();
 renderSuspicion();

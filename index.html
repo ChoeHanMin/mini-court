@@ -749,7 +749,7 @@ const BASE_GRID = [
 "..HSSSMSSSSH..",
 "...SSSSSSSS...",
 "....SSSSSS....",
-".WWOOOOOOOOWW.",
+".WWOOOWWOOOWW.",
 "SOOOOOOOOOOOOS",
 "SOOOOAAOOOOOOS",
 "SOOOOAAOOOOOOS",
@@ -841,6 +841,14 @@ function drawSprite(canvasId, palette, opts){
     colorGrid[0][3] = null;
     colorGrid[1][10] = palette.hair;
   }
+  if(opts.wideRobe){
+    const widenRows = [8,9,10,11,12,13,14,15,16,17];
+    widenRows.forEach(r=>{
+      for(let col=4; col<=9; col++){
+        if(colorGrid[r] && colorGrid[r][col]!=null) colorGrid[r][col] = palette.accent;
+      }
+    });
+  }
   applyMood(colorGrid, opts.mood);
 
   const outline = [];
@@ -873,13 +881,13 @@ function drawSprite(canvasId, palette, opts){
 
 const PALETTES = {
   defendant:{hair:'#4a4038', skin:'#dcb28c', outfit:'#b8925a', accent:'#3a3f55', collar:'#d8c39a'},
-  pros:{hair:'#241a14', skin:'#dcb28c', outfit:'#171310', accent:'#9c1f56', collar:'#f2ede0', accent2:'#c9a24b'},
+  pros:{hair:'#241a14', skin:'#dcb28c', outfit:'#171310', accent:'#5c1a34', collar:'#f2ede0', accent2:'#c9a24b'},
   def:{hair:'#3a2c1c', skin:'#e2ba90', outfit:'#1e3350', accent:'#c9a24b', collar:'#f2ede0'}
 };
 
 const ROLE_OPTS = {
   defendant:{cuffs:true, messyHair:true},
-  pros:{badge:true, robe:true},
+  pros:{badge:true, robe:true, wideRobe:true},
   def:{glasses:true}
 };
 
@@ -3485,6 +3493,8 @@ function startWarrantMode(){
 
 function nextWarrantCase(){
   warrantState.idx++;
+  el('overlay').style.display='none';
+  el('overlay').innerHTML='';
   if(warrantState.idx >= warrantState.list.length){
     el('evidenceBtn').style.display='none';
     el('summaryBtn').style.display='none';
@@ -3503,6 +3513,7 @@ function nextWarrantCase(){
   redrawRole('defendant','worried');
   redrawRole('pros','neutral');
   redrawRole('def','neutral');
+  playEnterAnimation();
   startBGM('ambient');
   playDoorSfx();
   warrantQueue = [

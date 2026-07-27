@@ -2,8 +2,7 @@
 
 > 형사재판 판사가 되어 검사·변호인의 공방을 듣고 최종 판결을 내리는 도트 스타일 웹 미니게임
 
-🎮 **[여기서 바로 플레이하기](여기에-GitHub-Pages-링크-넣기)**
-
+🎮 [여기서 바로 플레이하기](https://ChoeHanMin.github.io/mini-court/)
 ![status](https://img.shields.io/badge/status-in%20development-yellow)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 

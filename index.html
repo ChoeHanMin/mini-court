@@ -3128,7 +3128,7 @@ function showSettings(){
     <h1>${t('settingsTitle')}</h1>
     <p style="font-size:11px;">판사 이름${judgeName ? `: <b style="color:var(--brass);">${judgeName}</b>` : ' (미등록)'}</p>
     <div class="btnrow">
-      <button class="btn secondary small" onclick="changeJudgeNamePrompt()">이름 변경</button>
+      <button class="btn secondary small" onclick="changeJudgeNamePrompt(showSettings)">이름 변경</button>
     </div>
     <p style="font-size:11px;margin-top:16px;">${t('settingsSpeed')}</p>
     <div class="btnrow">
@@ -3161,8 +3161,8 @@ function showSettings(){
     <button class="btn" onclick="closeSettings()" style="margin-top:18px;">${t('close')}</button>`;
 }
 function closeSettings(){ el('overlay').style.display='none'; }
-function changeJudgeNamePrompt(){
-  showNameInput(()=>{ showSettings(); });
+function changeJudgeNamePrompt(returnTo){
+  showNameInput(()=>{ (returnTo || showTitle)(); });
 }
 function setTypeSpeed(v){ settings.typeSpeed=v; saveSettings(); }
 function setFontScale(big){
@@ -3497,6 +3497,8 @@ function showTitle(){
   ov.innerHTML = `
     <img src="icon-512.png" alt="미니법정 로고" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
     <h1>미니법정</h1>
+    <p style="font-size:12px;color:var(--brass);margin-bottom:2px;">${judgeName ? `현재 판사: ${judgeName} 판사님` : '판사 이름이 아직 등록되지 않았습니다'}</p>
+    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:10px;">✏️ 이름 ${judgeName ? '변경' : '등록'}하기</button>
     <p>당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.</p>
     <p style="font-size:11px;color:var(--parchment-dim);">무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br><br>죄를 지은 자를 함부로 풀어주면<br>시민들의 의심을 사게 됩니다.</p>
     <button class="btn" onclick="handleStartTrialClick()">${t('startTrial')}</button>

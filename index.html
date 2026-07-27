@@ -43,6 +43,7 @@
     width:100%;
     max-width:480px;
     height:100vh;
+    height:100dvh;
     max-height:854px;
     margin:0 auto;
     background:linear-gradient(180deg,var(--wood-dark) 0%, var(--wood) 55%, var(--wood-dark) 100%);
@@ -104,7 +105,7 @@
     overflow:hidden;
   }
   #benchTop{
-    position:absolute;top:0;left:0;right:0;height:26%;
+    position:absolute;top:0;left:0;right:0;height:16%;
     background:linear-gradient(180deg,#5a3a20,#3a2413);
     border-bottom:4px solid var(--brass-dim);
   }
@@ -120,7 +121,7 @@
     opacity:0.85;
   }
   #opinionGauge{
-    position:absolute; left:10px; right:10px; top:calc(26% + 6px);
+    position:absolute; left:10px; right:10px; top:calc(16% + 6px);
     display:flex; align-items:center; gap:6px; z-index:2;
   }
   .gaugeLabel{font-size:8px;color:var(--parchment-dim);letter-spacing:1px;white-space:nowrap;}
@@ -269,6 +270,9 @@
     background:linear-gradient(180deg,#20140b,#150c06);
     border-top:3px solid var(--brass);
     min-height:112px;
+    max-height:40vh;
+    max-height:40dvh;
+    overflow-y:auto;
     flex-shrink:0;
   }
   #dSpeaker{

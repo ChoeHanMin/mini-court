@@ -299,10 +299,16 @@
   .overlay{
     position:absolute; inset:0; z-index:20;
     background:rgba(8,5,3,0.94);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
     padding:26px; text-align:center;
     animation:fadeIn .35s ease;
     overflow-y:auto;
+  }
+  .overlay::before,.overlay::after{
+    content:"";
+    display:block;
+    flex:1 0 auto;
+    min-height:0;
   }
   @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
   .overlay h1{
@@ -474,7 +480,7 @@
 
 <script>
 /* ============================================================
-   미니법정 - Mini Court  ver 3.6
+   미니법정 - Mini Court  ver 1.0.0.0
    제작자: 최한민
    ============================================================ */
 
@@ -893,7 +899,7 @@ function drawSprite(canvasId, palette, opts){
   if(opts.wideRobe){
     const widenRows = [8,9,10,11,12,13,14,15,16,17];
     widenRows.forEach(r=>{
-      for(let col=4; col<=9; col++){
+      for(let col=3; col<=10; col++){
         if(colorGrid[r] && colorGrid[r][col]!=null) colorGrid[r][col] = palette.accent;
       }
     });
@@ -3338,7 +3344,7 @@ function generateShareCard(){
   ctx.fillText(`처리 사건: ${activeCaseList.length}건`, 240, 240);
   ctx.fillText(`시민의심: ${state.suspicion}/5`, 240, 275);
   ctx.font='11px monospace'; ctx.fillStyle='#8a6d33';
-  ctx.fillText('ver 3.6 · 제작: 최한민', 240, 600);
+  ctx.fillText('ver 1.0.0.0 · 제작: 최한민', 240, 600);
   const url = canvas.toDataURL('image/png');
   const ov = el('overlay');
   ov.innerHTML = `<h1>결과 카드</h1>
@@ -3348,7 +3354,7 @@ function generateShareCard(){
 }
 
 function downloadJudgmentDocument(){
-  let text = '=== 미니법정 판결문 모음 (ver 3.6) ===\n\n';
+  let text = '=== 미니법정 판결문 모음 (ver 1.0.0.0) ===\n\n';
   state.history.forEach((h,i)=>{
     const c = CASES.find(cc=>cc.id===h.caseId);
     text += `사건번호: 2026고합${1000+i}\n`;
@@ -3463,7 +3469,7 @@ function showTitle(){
     <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
     <div class="credit">제작자: 최한민</div>
-    <div class="verline">ver 3.6</div>`;
+    <div class="verline">ver 1.0.0.0</div>`;
 }
 
 function showDifficultySelect(){

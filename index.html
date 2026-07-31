@@ -3832,6 +3832,16 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(()=>{ /* 서비스워커 파일이 없거나 로드 실패해도 게임 자체는 정상 동작 */ });
   });
+
+  // 새 서비스워커가 제어권을 잡는 순간(=서버에 새 버전이 올라온 순간) 페이지를
+  // 딱 한 번만 자동 새로고침해서, 사용자가 "두 번 재실행"할 필요 없이
+  // 바로 최신 버전을 보게 함. refreshing 가드로 무한 새로고침을 막음.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 </script>
 </body>

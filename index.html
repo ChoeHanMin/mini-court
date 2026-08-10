@@ -3813,6 +3813,14 @@ el('summaryBtn').addEventListener('click', showSummary);
 el('settingsBtn').addEventListener('click', showSettings);
 el('homeBtn').addEventListener('click', confirmReturnToTitle);
 
+// 대사창뿐 아니라 법정 장면(캐릭터·배경) 영역을 탭해도 "탭하여 계속"과 동일하게 대사가 넘어가게 함
+el('scene').addEventListener('click', ()=>{
+  const box = el('dialogueBox');
+  if(box.style.display !== 'none' && typeof box.onclick === 'function'){
+    box.onclick();
+  }
+});
+
 initSprites();
 renderSuspicion();
 renderGauge();

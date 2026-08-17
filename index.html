@@ -1209,6 +1209,14 @@ const ACHIEVEMENTS = [
   {id:'comedy_master', icon:'🎭', name:'유쾌한 재판장', nameEn:'The Good-Humored Judge', desc:'우스꽝스러운 사건에서 모두 무죄를 선고함', descEn:'Acquit the defendant in every comedic case', check: h=>{
     const comedicIds=[2,4,7];
     return comedicIds.every(id=> h.some(x=>x.caseId===id && x.type==='무죄'));
+  }},
+  {id:'cyber_investigator', icon:'🖥️', name:'사이버 수사관', nameEn:'Cyber Investigator', desc:'사이버범죄 사건 5개에서 모두 적정 판결', descEn:'Hand down a fair ruling in all 5 cybercrime cases', check: h=>{
+    const cyberIds=[49,50,51,52,53];
+    return cyberIds.every(id=> h.some(x=>x.caseId===id && x.outcomeKind==='fair'));
+  }},
+  {id:'digital_detective', icon:'🔍', name:'디지털 명탐정', nameEn:'Digital Detective', desc:'사이버범죄 사건에서 시민의심 없이 전부 유죄 판결', descEn:'Convict every cybercrime defendant without raising public suspicion', check: h=>{
+    const cyberIds=[49,50,51,52,53];
+    return cyberIds.every(id=> h.some(x=>x.caseId===id && x.type!=='무죄' && x.outcomeKind!=='suspicion'));
   }}
 ];
 
@@ -3777,7 +3785,268 @@ const CASES = [
       {icon:'🏥', name:'Medical Records', desc:'The critical health condition at the time the victim was found'}
     ]
   }
+},
+{
+  id:49,
+  title:'사건 49. 딥페이크 성적 합성물 제작·유포',
+  charge:'허위영상물 제작·반포 등 (성폭력처벌법 제14조의2)',
+  guilty:true,
+  intro:'피고인은 온라인에서 구한 지인의 얼굴 사진을 AI 프로그램으로 합성해 성적 이미지를 제작하고, 이를 익명 채팅방에 유포한 혐의로 기소되었습니다. 제작 프로그램 사용 기록과 유포 게시물이 확보되었습니다.',
+  prosOpen:'피고인은 피해자의 동의 없이 얼굴을 성적인 이미지에 합성하는 프로그램을 사용해 허위영상물을 제작하고, 이를 여러 채팅방에 유포했습니다. 기기에서 제작 과정 파일이 그대로 발견되었습니다.',
+  defOpen:'피고인은 제작 사실은 인정하나, 유포는 몇 명 안 되는 지인에게만 전송했을 뿐 "공연히" 반포한 것은 아니라고 주장합니다.',
+  rounds:[
+    {p:'채팅방 대화 기록을 보면 최소 20명 이상에게 전달된 정황이 확인됩니다.', d:'그 채팅방도 비공개방이라 불특정 다수에게 공개된 게 아닙니다.', momentum:7},
+    {p:'피해자는 해당 이미지가 지금도 어딘가에서 재유포되고 있을까 봐 극심한 불안을 겪고 있습니다.', d:'유포 즉시 삭제 요청을 하는 등 사후 대응은 성실히 했습니다.', momentum:6}
+  ],
+  prosFinal:'검사는 피고인에게 징역 4년을 구형합니다.',
+  defFinal:'변호인은 초범이며 반포 범위가 제한적이었다는 점을 들어 선처를 호소합니다.',
+  finalStatement:'장난이었습니다... 이렇게 큰 문제가 될 줄 몰랐습니다.',
+  fairMin:2.5, fairMax:4.4, outrageHigh:6, outrageLow:1.5,
+  disallowed:['무기징역','무기금고','사형'],
+  law:{
+    article:'성폭력범죄의 처벌 등에 관한 특례법 제14조의2 (허위영상물 등의 반포등)',
+    text:'"반포등을 할 목적으로 사람의 얼굴·신체 등을 대상으로 한 촬영물 등을 성적 욕망 또는 수치심을 유발할 수 있는 형태로 편집·합성 또는 가공한 자는 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다. 편집물 등을 반포등을 한 자도 같다."',
+    note:'영리를 목적으로 정보통신망을 이용하여 반포한 경우 7년 이하의 징역으로 가중됩니다. "반포"는 불특정 또는 다수인에게 교부하는 것을 의미하며, 소수에게 전달한 경우에도 그로부터 확산될 가능성이 있으면 인정될 수 있습니다.'
+  },
+  precedent:'유사 사건은 반포 범위와 피해 확산 정도에 따라 통상 집행유예부터 징역 3~5년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'💻', name:'프로그램 사용 기록', desc:'합성 이미지 제작 프로그램의 작업 로그'},
+    {icon:'💬', name:'채팅방 유포 캡처', desc:'다수 인원이 포함된 채팅방 전송 내역'}
+  ],
+  en:{
+    title:'Case 49. Creating and Distributing Deepfake Sexual Content',
+    charge:'Creating and Distributing Fabricated Sexual Imagery',
+    intro:"The defendant is charged with using an AI program to superimpose an acquaintance's face, obtained online, onto sexual imagery, and distributing it in an anonymous chat room. Program usage logs and the distributed posts have been secured.",
+    prosOpen:"Without the victim's consent, the defendant used a face-swapping program to create fabricated sexual imagery and distributed it across multiple chat rooms. The production files were found intact on the device.",
+    defOpen:'The defendant admits to creating the images but claims they were only sent to a handful of acquaintances, not "publicly" distributed.',
+    rounds:[
+      {p:'Chat logs confirm the images reached at least 20 people.', d:'That chat room was also private, not disclosed to an unspecified public.'},
+      {p:"The victim suffers extreme anxiety over the possibility the images are still being re-shared somewhere.", d:'The defendant did make good-faith efforts afterward, such as requesting immediate deletion.'}
+    ],
+    prosFinal:'The prosecution requests four years of imprisonment for the defendant.',
+    defFinal:'The defense pleads for leniency, citing the first offense and the limited scope of distribution.',
+    finalStatement:"It was a joke... I never thought it would become such a serious problem.",
+    law:{
+      article:'Act on Special Cases Concerning the Punishment of Sexual Crimes, Article 14-2 (Distribution of Fabricated Images, etc.)',
+      text:'"A person who, for the purpose of distribution, edits, synthesizes, or processes a recording of another\'s face, body, etc. into a form capable of arousing sexual desire or shame shall be punished by imprisonment for not more than 5 years or a fine not exceeding 50 million won. The same applies to a person who distributes such an edited work."',
+      note:'Where distribution occurs via an information and communications network for profit, the penalty is aggravated to imprisonment for not more than 7 years. "Distribution" means providing the material to an unspecified or large number of people; even providing it to a small number can qualify if further spread is likely.'
+    },
+    precedent:'Similar cases are typically sentenced anywhere from a suspended prison term to 3-5 years of imprisonment, depending on the scope of distribution and extent of harm.',
+    evidence:[
+      {icon:'💻', name:'Program Usage Log', desc:'A work log from the image-synthesis program'},
+      {icon:'💬', name:'Chat Room Distribution Capture', desc:'A record of transmission to a chat room with numerous participants'}
+    ]
+  }
+},
+{
+  id:50,
+  title:'사건 50. 불법촬영물 유포',
+  charge:'카메라등이용촬영·반포등 (영리 목적, 성폭력처벌법 제14조)',
+  guilty:true,
+  intro:'피고인은 공중화장실에 몰래카메라를 설치해 촬영한 영상을 유료 회원제 사이트에 판매한 혐의로 기소되었습니다. 설치된 카메라와 판매 대금 입금 내역이 확보되었습니다.',
+  prosOpen:'피고인은 다수의 공중화장실에 소형 카메라를 설치해 불특정 다수를 촬영하고, 그 영상을 유료 사이트를 통해 판매하여 금전적 이익을 취했습니다. 판매 사이트 운영 기록과 계좌 내역이 명백합니다.',
+  defOpen:'피고인은 촬영 사실은 인정하나, 직접 판매한 것이 아니라 제3자에게 영상을 넘겼을 뿐이라고 주장합니다.',
+  rounds:[
+    {p:'판매 사이트 관리자 계정이 피고인 명의로 등록되어 있습니다.', d:'계정을 잠시 빌려준 것일 뿐, 실제 운영자는 따로 있습니다.'},
+    {p:'피해자만 최소 40명 이상으로 확인되며, 피해자들은 자신이 촬영된 사실조차 모르고 있었습니다.', d:'피고인 역시 이렇게까지 확산될 줄은 몰랐다고 진술합니다.'}
+  ],
+  prosFinal:'검사는 피고인에게 징역 6년을 구형합니다.',
+  defFinal:'변호인은 직접 판매 주체가 아니라는 점을 들어 감경을 호소합니다.',
+  finalStatement:'그렇게까지 많이 팔릴 줄은 몰랐습니다.',
+  fairMin:3.6, fairMax:6.5, outrageHigh:null, outrageLow:3.2,
+  disallowed:['사형','무기징역','무기금고','벌금','선고유예','과료','구류'],
+  law:{
+    article:'성폭력범죄의 처벌 등에 관한 특례법 제14조 (카메라 등을 이용한 촬영)',
+    text:'"카메라나 그 밖에 이와 유사한 기능을 갖춘 기계장치를 이용하여 성적 욕망 또는 수치심을 유발할 수 있는 사람의 신체를... 촬영하거나 그 촬영물을 반포·판매·임대·제공 또는 공공연하게 전시·상영한 자는 7년 이하의 징역 또는 5천만원 이하의 벌금에 처한다. 영리를 목적으로... 정보통신망을 이용하여 반포등을 한 자는 3년 이상의 유기징역에 처한다."',
+    note:'영리 목적 반포는 법정형 하한이 징역 3년으로 정해져 있어, 벌금형이나 집행유예를 선고할 수 없습니다.'
+  },
+  precedent:'영리 목적 불법촬영물 유포는 피해자 수와 확산 범위에 따라 통상 징역 3~8년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'📹', name:'압수된 몰래카메라', desc:'화장실에서 발견되어 압수됨'},
+    {icon:'💰', name:'판매 사이트 계좌 내역', desc:'유료 회원 결제 대금 입금 기록'}
+  ],
+  en:{
+    title:'Case 50. Distributing Illegally Filmed Content',
+    charge:'Illicit Filming and Distribution (For Profit)',
+    intro:'The defendant is charged with installing hidden cameras in public restrooms and selling the recorded footage on a paid membership site. The installed cameras and sales payment records have been secured.',
+    prosOpen:'The defendant installed small cameras in numerous public restrooms to film an unspecified number of people, then sold the footage through a paid site for profit. The site\'s operating records and account history are clear.',
+    defOpen:'The defendant admits to the filming but claims they did not sell the footage directly, merely passing it to a third party.',
+    rounds:[
+      {p:"The site's administrator account is registered under the defendant's name.", d:'That account was only briefly lent out - the actual operator is someone else.'},
+      {p:'At least 40 victims have been identified, none of whom were even aware they had been filmed.', d:'The defendant states they never expected it to spread this widely either.'}
+    ],
+    prosFinal:'The prosecution requests six years of imprisonment for the defendant.',
+    defFinal:'The defense pleads for mitigation, arguing the defendant was not the direct seller.',
+    finalStatement:"I never thought it would sell that much.",
+    law:{
+      article:'Act on Special Cases Concerning the Punishment of Sexual Crimes, Article 14 (Filming Using a Camera, etc.)',
+      text:'"A person who films the body of another in a manner capable of arousing sexual desire or shame using a camera or similar device, or who distributes, sells, leases, provides, or publicly displays such a recording, shall be punished by imprisonment for not more than 7 years or a fine not exceeding 50 million won. A person who, for profit, distributes such material via an information and communications network shall be punished by imprisonment for a fixed term of not less than 3 years."',
+      note:'Because distribution for profit carries a statutory minimum of 3 years, neither a fine nor a suspended sentence may be imposed.'
+    },
+    precedent:'Distribution of illegally filmed content for profit is typically sentenced to between 3 and 8 years of imprisonment, depending on the number of victims and the extent of the spread.',
+    evidence:[
+      {icon:'📹', name:'Seized Hidden Camera', desc:'Found and seized from the restroom'},
+      {icon:'💰', name:"Sales Site's Account Records", desc:'Records of payments from paying members'}
+    ]
+  }
+},
+{
+  id:51,
+  title:'사건 51. 랜섬웨어 유포',
+  charge:'정보통신망 침해 (정보통신망법 제70조의2)',
+  guilty:true,
+  intro:'피고인은 중소기업 여러 곳의 전산망에 랜섬웨어를 유포해 데이터를 암호화한 뒤, 복구 대가로 암호화폐를 요구한 혐의로 기소되었습니다. 악성코드 유포 기록과 암호화폐 지갑 거래 내역이 확보되었습니다.',
+  prosOpen:'피고인은 이메일 첨부파일로 위장한 랜섬웨어를 다수 기업에 유포해 전산망을 마비시키고, 복구 대가로 거액의 암호화폐를 요구했습니다. 유포 경로와 지갑 주소가 명백히 확인됩니다.',
+  defOpen:'피고인은 랜섬웨어 코드를 작성한 사실은 인정하나, 실제 유포와 금전 요구는 공범이 단독으로 저지른 일이라고 주장합니다.',
+  rounds:[
+    {p:'악성코드에 삽입된 암호화폐 지갑 주소가 피고인 명의 거래소 계정과 연결되어 있습니다.', d:'그 지갑은 예전에 사용하다 그만둔 것으로, 이번 일과는 무관합니다.'},
+    {p:'피해 기업 3곳이 실제로 복구 대금을 지불했고, 그 중 일부가 추적됐습니다.', d:'코드를 작성한 것과 그것을 실제로 유포해 이득을 취한 것은 별개의 문제입니다.'}
+  ],
+  prosFinal:'검사는 피고인에게 징역 5년을 구형합니다.',
+  defFinal:'변호인은 유포 및 금전 수취의 주체가 명확히 입증되지 않았다며 무죄를 주장합니다.',
+  finalStatement:'코드는 제가 짰지만, 실제로 뿌린 건 제가 아닙니다.',
+  fairMin:2.5, fairMax:4.4, outrageHigh:6, outrageLow:1.0,
+  disallowed:['무기징역','무기금고','사형'],
+  law:{
+    article:'정보통신망 이용촉진 및 정보보호 등에 관한 법률 제70조의2',
+    text:'"정당한 사유 없이 정보통신시스템·데이터 또는 프로그램을 훼손·멸실·변경·위조하거나 정보통신시스템의 운용을 방해할 수 있는 프로그램을... 유포한 자는 7년 이하의 징역 또는 7천만원 이하의 벌금에 처한다."',
+    note:'복구 대가로 금품을 요구한 부분은 별도로 공갈죄(형법 제350조)와의 상상적 경합 또는 실체적 경합이 문제될 수 있으나, 이 사건에서는 정보통신망법 위반 혐의로만 기소되었습니다.'
+  },
+  precedent:'악성 프로그램 유포 및 금전 요구가 결합된 사건은 피해 규모에 따라 통상 징역 2~6년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'💻', name:'악성코드 분석 결과', desc:'유포된 랜섬웨어의 코드 구조 분석'},
+    {icon:'🪙', name:'암호화폐 지갑 거래내역', desc:'복구 대금으로 추정되는 입금 기록'}
+  ],
+  en:{
+    title:'Case 51. Distributing Ransomware',
+    charge:'Damaging an Information and Communications Network',
+    intro:"The defendant is charged with distributing ransomware to the networks of several small and mid-sized companies, encrypting their data, and demanding cryptocurrency in exchange for restoring access. Records of the malware's distribution and cryptocurrency wallet transactions have been secured.",
+    prosOpen:'The defendant distributed ransomware disguised as an email attachment to numerous companies, paralyzing their networks, and demanded a large sum of cryptocurrency for restoration. The distribution path and wallet address are clearly confirmed.',
+    defOpen:'The defendant admits to writing the ransomware code but claims the actual distribution and payment demands were carried out solely by an accomplice.',
+    rounds:[
+      {p:'The cryptocurrency wallet address embedded in the malware is linked to an exchange account under the defendant\'s name.', d:'That wallet was one used previously and abandoned - it has nothing to do with this incident.'},
+      {p:'Three affected companies actually paid the ransom, and some of those funds were traced.', d:'Writing the code and actually distributing it for profit are two separate matters.'}
+    ],
+    prosFinal:'The prosecution requests five years of imprisonment for the defendant.',
+    defFinal:'The defense argues distribution and receipt of the funds were never clearly proven, and seeks acquittal.',
+    finalStatement:"I wrote the code, but I wasn't the one who actually spread it.",
+    law:{
+      article:'Act on Promotion of Information and Communications Network Utilization and Information Protection, Article 70-2',
+      text:'"A person who, without justifiable grounds, damages, destroys, alters, or falsifies an information and communications system, data, or a program, or distributes a program capable of interfering with the operation of an information and communications system, shall be punished by imprisonment for not more than 7 years or a fine not exceeding 70 million won."',
+      note:'The demand for payment in exchange for restoration could separately raise questions of extortion (Criminal Act, Article 350) in concurrence, but in this case the defendant was charged only with violating this Act.'
+    },
+    precedent:'Cases combining malware distribution with monetary demands are typically sentenced to between 2 and 6 years of imprisonment, depending on the scale of the damage.',
+    evidence:[
+      {icon:'💻', name:'Malware Analysis Report', desc:"An analysis of the distributed ransomware's code structure"},
+      {icon:'🪙', name:'Cryptocurrency Wallet Transaction History', desc:'Deposit records believed to be ransom payments'}
+    ]
+  }
+},
+{
+  id:52,
+  title:'사건 52. 다크웹을 통한 마약 밀수입',
+  charge:'마약류 수입 (마약류관리법 제58조)',
+  guilty:true,
+  intro:'피고인은 다크웹 마켓을 통해 해외에서 향정신성의약품을 대량 주문한 뒤, 국제우편을 가장해 국내로 밀반입한 혐의로 기소되었습니다. 세관 적발 물품과 다크웹 접속 기록이 확보되었습니다.',
+  prosOpen:'피고인은 신원 추적을 피하기 위해 암호화폐로 결제하고 다크웹 마켓을 통해 대량의 향정신성의약품을 해외에서 주문해 국내로 밀수입했습니다. 세관에서 적발된 물품과 접속 기록이 명백합니다.',
+  defOpen:'피고인은 소포를 받은 사실은 인정하나, 내용물이 마약류인 줄은 전혀 몰랐고 지인의 부탁으로 대신 수령해준 것뿐이라고 주장합니다.',
+  rounds:[
+    {p:'다크웹 마켓 계정의 로그인 기록과 주문 내역이 피고인의 기기에서 그대로 발견되었습니다.', d:'그 계정은 예전에 만들었다가 방치한 것으로, 이번 주문과는 무관합니다.'},
+    {p:'같은 수법으로 이미 3차례 유사한 소포를 수령한 정황이 확인됩니다.', d:'매번 다른 지인의 부탁이었을 뿐, 반복성에 특별한 의미를 둘 수 없습니다.'}
+  ],
+  prosFinal:'검사는 피고인에게 징역 12년을 구형합니다.',
+  defFinal:'변호인은 밀수입의 고의가 입증되지 않았다며 무죄를 주장합니다.',
+  finalStatement:'정말 몰랐습니다. 그냥 택배를 대신 받아준 것뿐입니다.',
+  fairMin:5.0, fairMax:9.0, outrageHigh:null, outrageLow:4.5,
+  disallowed:['사형','벌금','과료','구류','선고유예','집행유예'],
+  law:{
+    article:'마약류 관리에 관한 법률 제58조 제1항 제1호',
+    text:'"향정신성의약품을 수입한 자는 무기 또는 10년 이상의 징역에 처한다."',
+    note:'법정형 하한이 징역 10년으로 매우 높게 설정되어 있어, 무기징역 외의 벌금형·집행유예·구류 등은 선고할 수 없습니다. 이는 마약류 유통 경로의 최상단(수입·제조)을 가장 엄중히 처벌하려는 입법 취지입니다.'
+  },
+  precedent:'마약류 수입죄는 수입 규모와 조직적 개입 정도에 따라 통상 징역 10~20년 또는 무기징역까지 선고되는 매우 중한 범죄입니다.',
+  evidence:[
+    {icon:'📦', name:'세관 적발 물품', desc:'국제우편으로 위장된 향정신성의약품'},
+    {icon:'🌐', name:'다크웹 접속 기록', desc:'암호화폐 결제 및 주문 내역'}
+  ],
+  en:{
+    title:'Case 52. Drug Smuggling via the Dark Web',
+    charge:'Importation of Narcotics',
+    intro:'The defendant is charged with ordering a large quantity of psychotropic substances from abroad through a dark web marketplace, then smuggling them into the country disguised as international mail. The customs-seized items and dark web access logs have been secured.',
+    prosOpen:'To avoid identification, the defendant paid in cryptocurrency and ordered a large quantity of psychotropic substances from abroad through a dark web marketplace, smuggling them into the country. The items seized by customs and the access logs are clear.',
+    defOpen:'The defendant admits to receiving the package but claims to have had no idea the contents were narcotics, having merely received it on behalf of an acquaintance as a favor.',
+    rounds:[
+      {p:"Login records and order history for the dark web marketplace account were found intact on the defendant's device.", d:'That account was created long ago and then abandoned - it has nothing to do with this order.'},
+      {p:'Evidence shows the defendant received similar packages by the same method on three prior occasions.', d:'Each time was simply a different acquaintance\'s request - the repetition carries no special significance.'}
+    ],
+    prosFinal:'The prosecution requests twelve years of imprisonment for the defendant.',
+    defFinal:'The defense argues intent to smuggle was never proven, and seeks acquittal.',
+    finalStatement:"I really didn't know. I was just accepting a package for someone else.",
+    law:{
+      article:'Act on the Control of Narcotics, etc., Article 58, Paragraph 1, Item 1',
+      text:'"A person who imports a psychotropic substance shall be punished by life imprisonment or imprisonment for not less than 10 years."',
+      note:'Because the statutory minimum is set extremely high at 10 years, nothing short of that - fines, suspended sentences, detention, etc. - may be imposed, aside from life imprisonment. This reflects the legislative intent to most severely punish the top of the narcotics distribution chain (importation and manufacturing).'
+    },
+    precedent:'Importation of narcotics is a very serious offense typically sentenced to between 10 and 20 years of imprisonment, or even life imprisonment, depending on the scale of importation and degree of organized involvement.',
+    evidence:[
+      {icon:'📦', name:'Items Seized by Customs', desc:'Psychotropic substances disguised as international mail'},
+      {icon:'🌐', name:'Dark Web Access Logs', desc:'Cryptocurrency payment and order records'}
+    ]
+  }
+},
+{
+  id:53,
+  title:'사건 53. 로맨스 스캠',
+  charge:'사기 (연애 빙자 편취)',
+  guilty:true,
+  intro:'피고인은 SNS에서 해외 거주 전문직으로 신분을 위장해 피해자와 교제하며 신뢰를 쌓은 뒤, 각종 사유를 대며 거액을 편취한 혐의로 기소되었습니다. 위장 프로필과 계좌 이체 내역이 확보되었습니다.',
+  prosOpen:'피고인은 가짜 프로필로 피해자에게 접근해 수개월간 애정 관계를 가장하며 신뢰를 쌓은 뒤, "사업 자금이 급히 필요하다"는 등의 거짓말로 총 8천만원을 편취했습니다. 위장 신분과 송금 내역이 명백합니다.',
+  defOpen:'피고인은 돈을 받은 사실은 인정하나, 실제로 사업 투자를 계획했었고 사기의 고의는 없었다고 주장합니다.',
+  rounds:[
+    {p:'피고인이 사용한 프로필 사진은 실제 다른 사람의 SNS에서 도용한 것으로 확인됩니다.', d:'프로필 사진은 사생활 보호를 위해 빌린 것일 뿐, 사업 계획 자체는 진짜였습니다.'},
+    {p:'받은 돈은 사업과 무관한 개인 채무 변제와 유흥비로 사용된 정황이 계좌에서 확인됩니다.', d:'사업이 무산되면서 어쩔 수 없이 다른 용도로 돌려썼을 뿐입니다.'}
+  ],
+  prosFinal:'검사는 피고인에게 징역 4년을 구형합니다.',
+  defFinal:'변호인은 사업 계획 자체는 진심이었다며 사기죄 성립에 의문을 제기합니다.',
+  finalStatement:'처음엔 진짜 좋아했습니다. 돈 얘기는... 어쩌다 그렇게 됐습니다.',
+  fairMin:3.0, fairMax:5.4, outrageHigh:8, outrageLow:2.0,
+  disallowed:['무기징역','무기금고','사형'],
+  law:{
+    article:'형법 제347조 (사기)',
+    text:'"사람을 기망하여 재물의 교부를 받거나 재산상의 이익을 취득한 자는 10년 이하의 징역 또는 2천만원 이하의 벌금에 처한다."',
+    note:'허위의 신분과 애정 관계를 이용해 신뢰를 쌓은 뒤 금전을 편취하는 수법은 일반 사기보다 죄질이 무겁게 평가되는 경향이 있으며, 편취 금액이 클수록 실형 가능성이 높아집니다.'
+  },
+  precedent:'로맨스 스캠형 사기는 편취 금액과 계획성 정도에 따라 통상 징역 2~5년 사이에서 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'📱', name:'위장 프로필 자료', desc:'도용된 사진과 허위 신상 정보'},
+    {icon:'🏦', name:'계좌 이체 내역', desc:'총 8천만원의 송금 및 사용처 기록'}
+  ],
+  en:{
+    title:'Case 53. Romance Scam',
+    charge:'Fraud (Obtaining Money Under the Guise of a Romantic Relationship)',
+    intro:'The defendant is charged with posing as a professional living abroad on social media, building trust with the victim through a romantic relationship, and then defrauding them of a large sum of money under various pretexts. The fake profile and account transfer records have been secured.',
+    prosOpen:'The defendant approached the victim with a fake profile, feigned a romantic relationship for months to build trust, and then defrauded them of 80 million won in total through lies such as "urgently needing business funds." The fake identity and transfer records are clear.',
+    defOpen:'The defendant admits to receiving the money but claims a business investment was genuinely being planned, with no fraudulent intent.',
+    rounds:[
+      {p:"The profile photo the defendant used was confirmed to have been stolen from another person's actual social media.", d:'The profile photo was only borrowed to protect privacy - the business plan itself was real.'},
+      {p:'Account records show the money received was used for unrelated personal debt repayment and entertainment expenses, not the business.', d:'Once the business plan fell through, the funds were unavoidably redirected elsewhere.'}
+    ],
+    prosFinal:'The prosecution requests four years of imprisonment for the defendant.',
+    defFinal:'The defense questions whether fraud is established at all, arguing the business plan itself was genuine.',
+    finalStatement:"At first, I really did have feelings for them. The money part... it just ended up that way somehow.",
+    law:{
+      article:'Criminal Act, Article 347 (Fraud)',
+      text:'"A person who obtains property or a pecuniary advantage from another by deception shall be punished by imprisonment for not more than 10 years or a fine not exceeding 20 million won."',
+      note:'A scheme that builds trust through a fabricated identity and romantic relationship before defrauding the victim of money tends to be judged more severely than ordinary fraud, and the likelihood of actual imprisonment rises with the amount taken.'
+    },
+    precedent:'Romance-scam fraud is typically sentenced to between 2 and 5 years of imprisonment, depending on the amount taken and the degree of premeditation.',
+    evidence:[
+      {icon:'📱', name:'Fake Profile Materials', desc:'The stolen photo and false personal information'},
+      {icon:'🏦', name:'Account Transfer Records', desc:'Records of 80 million won transferred and how it was used'}
+    ]
+  }
 }
+
 ];
 
 const TUTORIAL_CASE = {

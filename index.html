@@ -652,11 +652,11 @@ const I18N = {
   ko:{
     startTrial:'형사재판 시작', records:'📖 재판 기록', tutorial:'🎓 튜토리얼',
     modeTitle:'재판 방식 선택', modePrompt:'어떤 방식으로 재판을 진행하시겠습니까?',
-    modeSeq:'정식 재판 (순서대로)', modeRandom:'전체 재판 시작 (랜덤 순서)', modePractice:'사건 선택 (연습 모드)', back:'뒤로',
+    modeSeq:'정식 재판 (순서대로)', modeRandom:'전체 재판 시작 (랜덤 순서)', modeQuick:'⚡ 빠른 재판 (10건 랜덤)', modePractice:'사건 선택 (연습 모드)', back:'뒤로',
     diffTitle:'난이도 선택', diffPrompt:'판정 기준의 엄격함을 선택하세요.',
     diffEasy:'초심자 (관대한 판정)', diffNormal:'보통', diffHard:'실전 (엄격한 판정)',
     caseSelectTitle:'사건 선택', caseSelectPrompt:'원하는 사건 하나를 골라 연습해볼 수 있습니다.',
-    filterAll:'전체', filterComedy:'코믹만', filterHeavy:'무거운 사건만',
+    filterAll:'전체', filterComedy:'코믹만', filterHeavy:'무거운 사건만', filterCyber:'사이버범죄만',
     settingsTitle:'설정', settingsSpeed:'텍스트 속도', settingsFont:'글자 크기', settingsHint:'양형 힌트',
     settingsLang:'언어', contentNote:'※ 언어를 변경하면 사건 대사·법률 내용도 함께 번역됩니다. (일부 사건은 번역 준비 중일 수 있습니다)',
     speedSlow:'느림', speedNormal:'보통', speedFast:'빠름', speedInstant:'즉시 표시',
@@ -684,11 +684,11 @@ const I18N = {
   en:{
     startTrial:'Start Criminal Trial', records:'📖 Case Records', tutorial:'🎓 Tutorial',
     modeTitle:'Select Trial Mode', modePrompt:'How would you like to proceed?',
-    modeSeq:'Standard Trial (In Order)', modeRandom:'Start Full Trial (Random Order)', modePractice:'Case Select (Practice)', back:'Back',
+    modeSeq:'Standard Trial (In Order)', modeRandom:'Start Full Trial (Random Order)', modeQuick:'⚡ Quick Trial (10 Random)', modePractice:'Case Select (Practice)', back:'Back',
     diffTitle:'Select Difficulty', diffPrompt:'Choose how strict the grading should be.',
     diffEasy:'Beginner (Lenient grading)', diffNormal:'Normal', diffHard:'Hardcore (Strict grading)',
     caseSelectTitle:'Select a Case', caseSelectPrompt:'Pick a single case to practice on.',
-    filterAll:'All', filterComedy:'Comedy only', filterHeavy:'Heavy cases only',
+    filterAll:'All', filterComedy:'Comedy only', filterHeavy:'Heavy cases only', filterCyber:'Cybercrime only',
     settingsTitle:'Settings', settingsSpeed:'Text Speed', settingsFont:'Font Size', settingsHint:'Sentencing Hint',
     settingsLang:'Language', contentNote:'※ Switching language also translates case dialogue and legal content. (A few cases may still be Korean-only while translation is in progress)',
     speedSlow:'Slow', speedNormal:'Normal', speedFast:'Fast', speedInstant:'Instant',
@@ -1207,7 +1207,7 @@ const ACHIEVEMENTS = [
   {id:'perfect_judge', icon:'⚖️', name:'완벽한 판사', nameEn:'The Perfect Judge', desc:'시민의심 0으로 전체 클리어', descEn:'Finish with 0 public suspicion', check: ()=> state.suspicion===0},
   {id:'jury_friend', icon:'🤝', name:'배심원의 벗', nameEn:"Friend of the Jury", desc:'배심원 평결과 일치하는 판결', descEn:"Hand down a ruling that matches the jury's verdict", check: h=> h.some(x=>x.juryMatch===true)},
   {id:'comedy_master', icon:'🎭', name:'유쾌한 재판장', nameEn:'The Good-Humored Judge', desc:'우스꽝스러운 사건에서 모두 무죄를 선고함', descEn:'Acquit the defendant in every comedic case', check: h=>{
-    const comedicIds=[2,4,7];
+    const comedicIds=[2,4,7,54,55];
     return comedicIds.every(id=> h.some(x=>x.caseId===id && x.type==='무죄'));
   }},
   {id:'cyber_investigator', icon:'🖥️', name:'사이버 수사관', nameEn:'Cyber Investigator', desc:'사이버범죄 사건 5개에서 모두 적정 판결', descEn:'Hand down a fair ruling in all 5 cybercrime cases', check: h=>{
@@ -1217,7 +1217,14 @@ const ACHIEVEMENTS = [
   {id:'digital_detective', icon:'🔍', name:'디지털 명탐정', nameEn:'Digital Detective', desc:'사이버범죄 사건에서 시민의심 없이 전부 유죄 판결', descEn:'Convict every cybercrime defendant without raising public suspicion', check: h=>{
     const cyberIds=[49,50,51,52,53];
     return cyberIds.every(id=> h.some(x=>x.caseId===id && x.type!=='무죄' && x.outcomeKind!=='suspicion'));
-  }}
+  }},
+  {id:'speed_judge', icon:'🏃', name:'스피드 판사', nameEn:'Speed Judge', desc:'40건 이상을 평균 30초 이내로 판결', descEn:'Rule on 40+ cases averaging under 30 seconds each', check: h=>{
+    const timed = h.filter(x=>x.elapsedMs>0);
+    if(timed.length < 40) return false;
+    const total = timed.reduce((s,x)=>s+x.elapsedMs,0);
+    return (total/timed.length) < 30000;
+  }},
+  {id:'full_house', icon:'🏛️', name:'전 사건 마스터', nameEn:'Master of the Docket', desc:'한 판에서 55개 사건을 전부 판결', descEn:'Rule on all 55 cases in a single session', check: h=> h.length>=55}
 ];
 
 /* ================= Case data ================= */
@@ -3788,6 +3795,7 @@ const CASES = [
 },
 {
   id:49,
+  tag:'cyber',
   title:'사건 49. 딥페이크 성적 합성물 제작·유포',
   charge:'허위영상물 제작·반포 등 (성폭력처벌법 제14조의2)',
   guilty:true,
@@ -3840,6 +3848,7 @@ const CASES = [
 },
 {
   id:50,
+  tag:'cyber',
   title:'사건 50. 불법촬영물 유포',
   charge:'카메라등이용촬영·반포등 (영리 목적, 성폭력처벌법 제14조)',
   guilty:true,
@@ -3892,6 +3901,7 @@ const CASES = [
 },
 {
   id:51,
+  tag:'cyber',
   title:'사건 51. 랜섬웨어 유포',
   charge:'정보통신망 침해 (정보통신망법 제70조의2)',
   guilty:true,
@@ -3944,6 +3954,7 @@ const CASES = [
 },
 {
   id:52,
+  tag:'cyber',
   title:'사건 52. 다크웹을 통한 마약 밀수입',
   charge:'마약류 수입 (마약류관리법 제58조)',
   guilty:true,
@@ -3996,6 +4007,7 @@ const CASES = [
 },
 {
   id:53,
+  tag:'cyber',
   title:'사건 53. 로맨스 스캠',
   charge:'사기 (연애 빙자 편취)',
   guilty:true,
@@ -4043,6 +4055,112 @@ const CASES = [
     evidence:[
       {icon:'📱', name:'Fake Profile Materials', desc:'The stolen photo and false personal information'},
       {icon:'🏦', name:'Account Transfer Records', desc:'Records of 80 million won transferred and how it was used'}
+    ]
+  }
+},
+{
+  id:54,
+  tag:'comedy',
+  title:'사건 54. 이웃집 개와의 성대모사 대결',
+  charge:'경범죄처벌법 위반 (인근소란 등)',
+  guilty:false,
+  intro:'피고인은 매일 밤 옆집 개가 짖을 때마다 똑같이 개 짖는 소리를 따라 해서 "동물을 흉내내 소란을 피웠다"는 혐의로 기소되었습니다. 정작 옆집 개는 그 이후로 얌전해졌다는 목격담도 있습니다.',
+  prosOpen:'피고인은 매일 밤 10시마다 개 짖는 소리를 크게 흉내내어 주민들의 수면을 방해했습니다. (오른쪽 위 🔍 증거 버튼을 눌러 확인해보세요.)',
+  defOpen:'피고인은 오히려 옆집 개를 진정시키려고 대화를 시도한 것이며, 결과적으로 소음이 줄었다고 주장합니다.',
+  rounds:[
+    {p:'이유가 무엇이든 사람이 개 짖는 소리를 낸 것 자체가 기이한 행동입니다.', d:'개와의 소통 방식은 사람마다 다를 수 있으며, 법으로 금지된 바 없습니다.', momentum:5},
+    {p:'주민들은 처음에 너무 놀라서 신고했다고 진술합니다.', d:'결과적으로 옆집 개는 짖는 빈도가 줄었고, 오히려 소음 민원이 감소했습니다.', momentum:4}
+  ],
+  prosFinal:'검사는 피고인에게 과료 5만원을 구형합니다.',
+  defFinal:'변호인은 오히려 소음을 줄이는 데 기여했다며 무죄를 주장합니다.',
+  finalStatement:'저는 그냥... 그 개랑 대화를 하고 싶었을 뿐입니다.',
+  fairMin:0, fairMax:0.5, outrageHigh:2, outrageLow:null,
+  disallowed:['무기징역','무기금고','사형','징역','금고'],
+  law:{
+    article:'해당 없음',
+    text:'"동물 소리를 흉내 내는 행위 자체를 처벌하는 조항은 존재하지 않습니다."',
+    note:'인근소란죄가 성립하려면 그로 인해 실제로 다른 사람에게 피해를 끼쳐야 하는데, 이 사건은 오히려 소음이 줄어든 결과로 이어졌습니다.'
+  },
+  precedent:'유사 사건은 기소 자체가 드물며, 기소되더라도 대부분 무죄나 공소기각으로 종결됩니다.',
+  evidence:[
+    {icon:'🐕', name:'옆집 개 소음 기록', desc:'피고인의 "성대모사" 이후 짖는 빈도가 감소한 기록'},
+    {icon:'📋', name:'민원 접수 내역', desc:'초기 놀람으로 인한 신고 1건, 이후 추가 신고 없음'}
+  ],
+  en:{
+    title:'Case 54. The Impersonation Duel with the Neighbor\'s Dog',
+    charge:'Violation of the Minor Offenses Act (Public Disturbance)',
+    intro:"The defendant is charged with imitating a dog's bark every night whenever the neighbor's dog barked, allegedly \"causing a disturbance by mimicking an animal.\" There are even witness accounts that the neighbor's dog became noticeably calmer afterward.",
+    prosOpen:"Every night at 10 PM, the defendant loudly imitated barking, disturbing residents' sleep. (Try tapping the 🔍 Evidence button in the top right to check the evidence.)",
+    defOpen:"The defendant claims this was actually an attempt to calm the neighbor's dog down, and that noise levels dropped as a result.",
+    rounds:[
+      {p:'Whatever the reason, a person making barking sounds is inherently bizarre behavior.', d:'Communication styles with animals vary from person to person, and nothing about this is prohibited by law.'},
+      {p:'Residents state they were startled and called it in at first.', d:"As a result, the neighbor's dog barked less often, and noise complaints actually decreased."}
+    ],
+    prosFinal:'The prosecution requests a minor fine of 50,000 won.',
+    defFinal:'The defense argues the defendant actually helped reduce noise, and seeks acquittal.',
+    finalStatement:"I just... wanted to have a conversation with that dog.",
+    law:{
+      article:'Not Applicable',
+      text:'"No provision criminalizes the act of imitating an animal sound by itself."',
+      note:'For a public disturbance offense to apply, actual harm to others must result - and this incident, if anything, resulted in less noise overall.'
+    },
+    precedent:'Similar cases are rarely prosecuted at all, and when they are, they almost always end in acquittal or dismissal.',
+    evidence:[
+      {icon:'🐕', name:"Neighbor's Dog Noise Log", desc:"A record showing reduced barking frequency after the defendant's \"impersonations\""},
+      {icon:'📋', name:'Complaint Records', desc:'One report filed out of initial surprise, with no further complaints afterward'}
+    ]
+  }
+},
+{
+  id:55,
+  tag:'comedy',
+  title:'사건 55. 무한 리필 식당 사장님의 눈물',
+  charge:'업무방해 (다소 무리한 기소)',
+  guilty:false,
+  intro:'피고인은 무한리필 고깃집에서 "2인분 가격에 6인분을 먹었다"는 이유로 업무방해 혐의로 기소되었습니다. 메뉴판에는 분명 "무제한 리필"이라고 적혀 있었습니다.',
+  prosOpen:'피고인은 무한리필 매장의 정상적인 회전율을 넘어서는 폭식으로 사실상 영업을 방해했습니다. (🔍 증거 버튼으로 메뉴판을 확인해보세요.)',
+  defOpen:'피고인은 메뉴판에 명시된 대로 정당하게 이용했을 뿐이며, 많이 먹은 것이 범죄가 될 수는 없다고 주장합니다.',
+  rounds:[
+    {p:'사장님은 피고인 때문에 옆 테이블 손님을 받지 못해 매출에 손해를 봤다고 진술합니다.', d:'그건 가게의 영업 방식 자체의 문제이지, 손님의 잘못이 아닙니다. (📜 요약 버튼으로 지금까지의 공방을 다시 볼 수 있습니다.)', momentum:5},
+    {p:'피고인은 무려 3시간 동안 자리를 차지하고 있었습니다.', d:'메뉴판 어디에도 "3시간 이내"라는 제한 문구는 없었습니다.', momentum:6}
+  ],
+  prosFinal:'검사는 피고인에게 벌금 30만원을 구형합니다.',
+  defFinal:'변호인은 정당한 메뉴 이용이었다며 무죄를 주장합니다.',
+  finalStatement:'메뉴판에 무제한이라고 써 있어서... 최선을 다했을 뿐입니다.',
+  fairMin:0, fairMax:0.5, outrageHigh:2, outrageLow:null,
+  disallowed:['무기징역','무기금고','사형','징역','금고'],
+  law:{
+    article:'형법 제314조 (업무방해) - 해당 없음',
+    text:'"위계 또는 위력으로써 사람의 업무를 방해한 자는 5년 이하의 징역 또는 1500만원 이하의 벌금에 처한다."',
+    note:'메뉴에 명시된 서비스를 정상적으로 이용한 것은 "위계"나 "위력"에 해당하지 않는다는 것이 일반적인 법리 해석입니다. 무제한 제공은 업체가 감수해야 할 영업상의 리스크입니다.'
+  },
+  precedent:'유사 사건은 대부분 기소조차 되지 않으며, 기소되더라도 업무방해죄의 구성요건 미충족으로 무죄가 선고되는 경우가 많습니다.',
+  evidence:[
+    {icon:'📋', name:'매장 메뉴판', desc:'"1인 무제한 리필, 시간 제한 없음"이라고 명시됨'},
+    {icon:'🍖', name:'주문 내역', desc:'2인분 가격으로 정상 결제된 영수증'}
+  ],
+  en:{
+    title:'Case 55. The All-You-Can-Eat Owner\'s Tears',
+    charge:'Obstruction of Business (A Somewhat Overreaching Charge)',
+    intro:'The defendant is charged with obstruction of business for "eating six servings\' worth at an all-you-can-eat barbecue restaurant while paying for two." The menu clearly stated "unlimited refills."',
+    prosOpen:"The defendant's overeating, well beyond the restaurant's normal table-turnover rate, effectively obstructed its business. (Try tapping the 🔍 Evidence button to check the menu.)",
+    defOpen:'The defendant claims to have simply used the service exactly as advertised on the menu, and that eating a lot cannot be a crime.',
+    rounds:[
+      {p:"The owner states they lost revenue because they couldn't seat other customers at the next table because of the defendant.", d:"That's a problem with the restaurant's own business model, not the customer's fault. (You can tap the 📜 Summary button to review the arguments so far.)"},
+      {p:'The defendant occupied the table for a full 3 hours.', d:'Nowhere on the menu was there any wording limiting the visit to "within 3 hours."'}
+    ],
+    prosFinal:'The prosecution requests a fine of 300,000 won.',
+    defFinal:'The defense argues this was a legitimate use of the menu, and seeks acquittal.',
+    finalStatement:"The menu said unlimited... I just did my best.",
+    law:{
+      article:'Criminal Act, Article 314 (Obstruction of Business) - Not Applicable',
+      text:'"A person who obstructs the business of another by deceptive means or by force shall be punished by imprisonment for not more than 5 years or a fine not exceeding 15 million won."',
+      note:'It is generally accepted legal reasoning that normally using a service exactly as advertised on the menu does not constitute "deceptive means" or "force." Offering unlimited service is a business risk the establishment must accept.'
+    },
+    precedent:'Similar cases are rarely even prosecuted, and when they are, they typically end in acquittal for failing to meet the elements of obstruction of business.',
+    evidence:[
+      {icon:'📋', name:'Restaurant Menu', desc:'States "unlimited refills per person, no time limit"'},
+      {icon:'🍖', name:'Order Record', desc:'A receipt showing normal payment for two servings'}
     ]
   }
 }
@@ -4483,13 +4601,30 @@ function shuffleArr(arr){
   return arr;
 }
 
+/* 사형/무기징역급 극단적 사건 (초심자 모드에서 전체 재판 시 자동 제외) */
+const EXTREME_CASE_IDS = [8, 11, 19, 25, 29, 42, 47, 52];
+
 function startGame(mode){
   ensureAudio();
   state.suspicion = 0;
   state.caseIdx = -1;
   state.history = [];
   renderSuspicion();
-  activeCaseList = shuffleArr(CASES.slice()); // 항상 랜덤 순서로 시작
+  const pool = difficulty==='easy' ? CASES.filter(c=>!EXTREME_CASE_IDS.includes(c.id)) : CASES.slice();
+  activeCaseList = shuffleArr(pool); // 항상 랜덤 순서로 시작
+  singleCaseMode = false;
+  el('overlay').style.display='none';
+  nextCase();
+}
+
+function startQuickGame(){
+  ensureAudio();
+  state.suspicion = 0;
+  state.caseIdx = -1;
+  state.history = [];
+  renderSuspicion();
+  const pool = difficulty==='easy' ? CASES.filter(c=>!EXTREME_CASE_IDS.includes(c.id)) : CASES.slice();
+  activeCaseList = shuffleArr(pool).slice(0, 10);
   singleCaseMode = false;
   el('overlay').style.display='none';
   nextCase();
@@ -5422,6 +5557,7 @@ function showDifficultySelect(){
     <h1>${t('diffTitle')}</h1>
     <p>${t('diffPrompt')}</p>
     <button class="btn" onclick="setDifficulty('easy')">${t('diffEasy')}</button>
+    <p style="font-size:10px;color:var(--parchment-dim);margin-top:-8px;">${tr('※ 초심자 모드에서는 사형·무기징역급 극단적 사건이 전체 재판에서 제외됩니다.', '※ In Beginner mode, extreme cases eligible for death penalty or life imprisonment are excluded from full trials.')}</p>
     <button class="btn" onclick="setDifficulty('normal')">${t('diffNormal')}</button>
     <button class="btn" onclick="setDifficulty('hard')">${t('diffHard')}</button>
     <button class="btn secondary" onclick="showTitle()">${t('back')}</button>`;
@@ -5440,6 +5576,7 @@ function showModeSelect(){
     <h1>${t('modeTitle')}</h1>
     <p>${t('modePrompt')}</p>
     <button class="btn" onclick="startGame('random')">${t('modeRandom')}</button>
+    <button class="btn secondary" onclick="startQuickGame()">${t('modeQuick')}</button>
     <button class="btn secondary" onclick="showCaseSelect('all')">${t('modePractice')}</button>
     <button class="btn secondary" onclick="showDifficultySelect()">${t('back')}</button>`;
 }
@@ -5456,6 +5593,7 @@ function showCaseSelect(filter){
       <button class="btn secondary small" onclick="showCaseSelect('all')">${t('filterAll')}</button>
       <button class="btn secondary small" onclick="showCaseSelect('comedy')">${t('filterComedy')}</button>
       <button class="btn secondary small" onclick="showCaseSelect('heavy')">${t('filterHeavy')}</button>
+      <button class="btn secondary small" onclick="showCaseSelect('cyber')">${t('filterCyber')}</button>
     </div>`;
   const items = list.map(c=>{
     const idx = CASES.indexOf(c);

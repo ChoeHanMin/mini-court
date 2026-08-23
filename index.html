@@ -552,6 +552,135 @@ async function saveJudgeName(name){
   judgeName = name;
   try{ await window.storage.set('judgeName', name, false); }catch(e){}
 }
+
+/* ================= 판사 경력(레벨) 시스템 ================= */
+const JUDGE_TITLES = [
+  {min:1, ko:'수습판사', en:'Trainee Judge'},
+  {min:5, ko:'배석판사', en:'Associate Judge'},
+  {min:10, ko:'단독판사', en:'Sole Judge'},
+  {min:20, ko:'부장판사', en:'Presiding Judge'},
+  {min:35, ko:'대법관', en:'Supreme Court Justice'}
+];
+const XP_PER_LEVEL = 100;
+let judgeCareer = {xp:0};
+function levelFromXp(xp){
+  return Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
+}
+function titleForLevel(level){
+  let cur = JUDGE_TITLES[0];
+  for(const t of JUDGE_TITLES){ if(level >= t.min) cur = t; }
+  return cur;
+}
+async function loadJudgeCareer(){
+  try{
+    const res = await window.storage.get('judgeCareer', false);
+    if(res && res.value) judgeCareer = JSON.parse(res.value);
+  }catch(e){}
+}
+function addJudgeXpSync(amount){
+  if(amount<=0) return {leveledUp:false, newLevel:levelFromXp(judgeCareer.xp)};
+  const prevLevel = levelFromXp(judgeCareer.xp);
+  judgeCareer.xp += amount;
+  const newLevel = levelFromXp(judgeCareer.xp);
+  try{ window.storage.set('judgeCareer', JSON.stringify(judgeCareer), false).catch(()=>{}); }catch(e){}
+  return {leveledUp:newLevel>prevLevel, newLevel};
+}
+function xpForOutcome(kind){
+  switch(kind){
+    case 'fair': return 15;
+    case 'correct_acquittal': return 15;
+    case 'mild_lenient': case 'mild_harsh': return 8;
+    case 'suspicion': return 3;
+    default: return 0;
+  }
+}
+
+/* ================= 오늘의 사건 + 연속 출석 ================= */
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function seededIndex(seedStr, max){
+  let h = 0;
+  for(let i=0;i<seedStr.length;i++){ h = (h*31 + seedStr.charCodeAt(i)) >>> 0; }
+  return h % max;
+}
+function getDailyCase(){
+  const key = todayKey();
+  const idx = seededIndex(key, CASES.length);
+  return CASES[idx];
+}
+let dailyStreakData = {lastDate:null, streak:0, longest:0};
+async function loadDailyStreak(){
+  try{
+    const res = await window.storage.get('dailyStreak', false);
+    if(res && res.value) dailyStreakData = JSON.parse(res.value);
+  }catch(e){}
+}
+async function markDailyPlayed(){
+  const today = todayKey();
+  if(dailyStreakData.lastDate === today) return dailyStreakData; // 오늘 이미 함
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const yKey = `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;
+  if(dailyStreakData.lastDate === yKey) dailyStreakData.streak += 1;
+  else dailyStreakData.streak = 1;
+  dailyStreakData.lastDate = today;
+  dailyStreakData.longest = Math.max(dailyStreakData.longest||0, dailyStreakData.streak);
+  try{ await window.storage.set('dailyStreak', JSON.stringify(dailyStreakData), false); }catch(e){}
+  return dailyStreakData;
+}
+
+/* ================= 사건 수첩 (케이스 로그) ================= */
+let caseLog = {};
+async function loadCaseLog(){
+  try{
+    const res = await window.storage.get('caseLog', false);
+    if(res && res.value) caseLog = JSON.parse(res.value);
+  }catch(e){}
+}
+function starsForOutcome(kind){
+  if(kind==='fair' || kind==='correct_acquittal') return 3;
+  if(kind==='mild_lenient' || kind==='mild_harsh') return 2;
+  if(kind==='suspicion') return 1;
+  return 0;
+}
+async function updateCaseLog(caseId, outcomeKind){
+  const stars = starsForOutcome(outcomeKind);
+  if(stars<=0) return;
+  const prev = caseLog[caseId] || 0;
+  if(stars > prev){
+    caseLog[caseId] = stars;
+    try{ await window.storage.set('caseLog', JSON.stringify(caseLog), false); }catch(e){}
+  }
+}
+function caseLogSummary(){
+  const entries = Object.values(caseLog);
+  const done = entries.length;
+  const perfect = entries.filter(s=>s===3).length;
+  return {done, perfect, total: CASES.length};
+}
+function showCaseLogScreen(){
+  el('evidenceBtn').style.display='none';
+  el('summaryBtn').style.display='none';
+  const ov = el('overlay');
+  ov.style.display='flex';
+  const rows = CASES.map(c=>{
+    const stars = caseLog[c.id] || 0;
+    const starHtml = stars>0 ? '⭐'.repeat(stars) + '☆'.repeat(3-stars) : tr('미도전','Not yet attempted');
+    const dim = stars===0 ? 'color:var(--parchment-dim);' : '';
+    return `<div class="archiveRow" style="display:flex;justify-content:space-between;align-items:center;${dim}">
+      <span style="font-size:11px;">${cf(c,'title')}</span>
+      <span style="font-size:11px;white-space:nowrap;margin-left:8px;">${starHtml}</span>
+    </div>`;
+  }).join('');
+  const logSum = caseLogSummary();
+  ov.innerHTML = `<h1>📔 ${tr('사건 수첩','Case Log')}</h1>
+    <p style="font-size:11px;color:var(--parchment-dim);">${tr(`총 ${logSum.total}건 중 ${logSum.done}건 기록 · 완벽 판결 ⭐${logSum.perfect}건`, `${logSum.done} of ${logSum.total} cases logged · ${logSum.perfect} perfect rulings ⭐`)}</p>
+    <p style="font-size:10px;color:var(--parchment-dim);">${tr('⭐⭐⭐ 적정 판결 · ⭐⭐ 다소 관대/과중 · ⭐ 부당 무죄','⭐⭐⭐ Fair ruling · ⭐⭐ Somewhat lenient/harsh · ⭐ Unjust acquittal')}</p>
+    <div style="max-height:340px;overflow-y:auto;width:100%;max-width:340px;margin-top:8px;">${rows}</div>
+    <button class="btn" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
+}
+
 function withJudgeOpening(text){
   if(!judgeName) return text;
   return tr(`존경하는 ${judgeName} 판사님, ${text}`, `Your Honor Judge ${judgeName}, ${text}`);
@@ -590,6 +719,12 @@ function handleStartWarrantClick(){
   showLegalDisclaimer(()=>{
     if(judgeName) showWarrantIntro();
     else showNameInput(showWarrantIntro);
+  });
+}
+function handleStartAppealClick(){
+  showLegalDisclaimer(()=>{
+    if(judgeName) showAppealIntro();
+    else showNameInput(showAppealIntro);
   });
 }
 let _seenDisclaimer = false;
@@ -650,7 +785,7 @@ function adjustedRange(c){
 /* ================= i18n (전체 UI + 사건 콘텐츠 번역) ================= */
 const I18N = {
   ko:{
-    startTrial:'형사재판 시작', records:'📖 재판 기록', tutorial:'🎓 튜토리얼',
+    startTrial:'형사재판(1심) 시작', startAppeal:'형사재판(항소심) 시작', records:'📖 재판 기록', tutorial:'🎓 튜토리얼', dailyCaseLabel:'오늘의 사건',
     modeTitle:'재판 방식 선택', modePrompt:'어떤 방식으로 재판을 진행하시겠습니까?',
     modeSeq:'정식 재판 (순서대로)', modeRandom:'전체 재판 시작 (랜덤 순서)', modeQuick:'⚡ 빠른 재판 (10건 랜덤)', modePractice:'사건 선택 (연습 모드)', back:'뒤로',
     diffTitle:'난이도 선택', diffPrompt:'판정 기준의 엄격함을 선택하세요.',
@@ -682,7 +817,7 @@ const I18N = {
     disclaimerAck:'확인했습니다'
   },
   en:{
-    startTrial:'Start Criminal Trial', records:'📖 Case Records', tutorial:'🎓 Tutorial',
+    startTrial:'Start Criminal Trial (First Instance)', startAppeal:'Start Criminal Trial (Appeals)', records:'📖 Case Records', tutorial:'🎓 Tutorial', dailyCaseLabel:"Today's Case",
     modeTitle:'Select Trial Mode', modePrompt:'How would you like to proceed?',
     modeSeq:'Standard Trial (In Order)', modeRandom:'Start Full Trial (Random Order)', modeQuick:'⚡ Quick Trial (10 Random)', modePractice:'Case Select (Practice)', back:'Back',
     diffTitle:'Select Difficulty', diffPrompt:'Choose how strict the grading should be.',
@@ -4468,7 +4603,9 @@ let state = {
   dlgPos:0,
   currentCase:null,
   history:[],
-  _appealUsed:false
+  _appealUsed:false,
+  streak:0,
+  maxStreak:0
 };
 let activeCaseList = CASES.slice();
 let singleCaseMode = false;
@@ -4609,6 +4746,8 @@ function startGame(mode){
   state.suspicion = 0;
   state.caseIdx = -1;
   state.history = [];
+  state.streak = 0;
+  state.maxStreak = 0;
   renderSuspicion();
   const pool = difficulty==='easy' ? CASES.filter(c=>!EXTREME_CASE_IDS.includes(c.id)) : CASES.slice();
   activeCaseList = shuffleArr(pool); // 항상 랜덤 순서로 시작
@@ -4622,6 +4761,8 @@ function startQuickGame(){
   state.suspicion = 0;
   state.caseIdx = -1;
   state.history = [];
+  state.streak = 0;
+  state.maxStreak = 0;
   renderSuspicion();
   const pool = difficulty==='easy' ? CASES.filter(c=>!EXTREME_CASE_IDS.includes(c.id)) : CASES.slice();
   activeCaseList = shuffleArr(pool).slice(0, 10);
@@ -4635,6 +4776,8 @@ function startSingleCase(idx){
   state.suspicion = 0;
   state.caseIdx = -1;
   state.history = [];
+  state.streak = 0;
+  state.maxStreak = 0;
   renderSuspicion();
   activeCaseList = [CASES[idx]];
   singleCaseMode = true;
@@ -4648,6 +4791,8 @@ function startTutorial(){
     state.suspicion = 0;
     state.caseIdx = -1;
     state.history = [];
+    state.streak = 0;
+    state.maxStreak = 0;
     renderSuspicion();
     activeCaseList = [TUTORIAL_CASE];
     singleCaseMode = false;
@@ -4673,6 +4818,7 @@ function nextCase(){
     el('evidenceBtn').style.display='none';
     el('summaryBtn').style.display='none';
     if(tutorialMode){ tutorialMode=false; showTutorialDone(); }
+    else if(state._isDailyCase){ state._isDailyCase=false; showTitle(); }
     else if(singleCaseMode) showCaseSelect(caseSelectFilter);
     else showEnding();
     return;
@@ -4734,7 +4880,8 @@ function buildDialogueQueue(c){
 
 function playQueue(){
   if(state.dlgPos >= state.dlgQueue.length){
-    showLawCard();
+    if(state._appealFlowActive){ showAppealVerdictReveal(); }
+    else { showLawCard(); }
     return;
   }
   const item = state.dlgQueue[state.dlgPos];
@@ -4969,6 +5116,10 @@ function resolveVerdict(type, years, extras){
   const outcome = judge(c, type, years);
   const mood = defendantMoodFor(outcome, type);
   redrawRole('defendant', mood);
+  if(state._appealResentencing){
+    setTimeout(()=>{ showAppealResentenceResult(type, years, outcome, extras||{}); }, 900);
+    return;
+  }
   setTimeout(()=>{ showResultOverlay(type, years, outcome, extras||{}); }, 900);
 }
 
@@ -5004,6 +5155,25 @@ function pushHistory(c, type, years, outcome){
     score, fairMid, juryMatch, outcomeKind: outcome.kind,
     elapsedMs: state._lastElapsedMs || 0
   });
+
+  // 연속 정답 콤보
+  state._comboBonusApplied = false;
+  if(outcome.kind==='fair' || outcome.kind==='correct_acquittal'){
+    state.streak += 1;
+    state.maxStreak = Math.max(state.maxStreak, state.streak);
+    if(state.streak>0 && state.streak%5===0 && state.suspicion>0){
+      state.suspicion -= 1;
+      state._comboBonusApplied = true;
+    }
+  } else {
+    state.streak = 0;
+  }
+
+  // 경력 XP + 사건 수첩 갱신
+  const xp = xpForOutcome(outcome.kind);
+  state._lastXpGain = xp;
+  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  updateCaseLog(c.id, outcome.kind);
 }
 
 /* ================= Archive (persistent record) ================= */
@@ -5041,6 +5211,7 @@ async function showArchive(){
   let records = [];
   let achievements = [];
   let warrantRuns = [];
+  let appealRuns = [];
   try{
     const res = await window.storage.get('archive', false);
     if(res && res.value) records = JSON.parse(res.value);
@@ -5053,17 +5224,27 @@ async function showArchive(){
     const res3 = await window.storage.get('warrantArchive', false);
     if(res3 && res3.value) warrantRuns = JSON.parse(res3.value);
   }catch(e){ warrantRuns = []; }
-  renderArchive(records, achievements, warrantRuns);
+  try{
+    const res4 = await window.storage.get('appealArchive', false);
+    if(res4 && res4.value) appealRuns = JSON.parse(res4.value);
+  }catch(e){ appealRuns = []; }
+  renderArchive(records, achievements, warrantRuns, appealRuns);
 }
-function renderArchive(records, achievements, warrantRuns){
+function renderArchive(records, achievements, warrantRuns, appealRuns){
   achievements = achievements || [];
   warrantRuns = warrantRuns || [];
+  appealRuns = appealRuns || [];
   const ov = el('overlay');
   const badgeNames = achievements.map(id=>{
     const a = ACHIEVEMENTS.find(x=>x.id===id);
     return a ? `${a.icon||'🏅'} ${settings.lang==='en' ? a.nameEn : a.name}` : id;
   });
   const badgeHtml = badgeNames.length ? `<div class="lawtext">🏅 ${tr('획득한 업적','Achievements Earned')}<br>${badgeNames.join(', ')}</div>` : '';
+
+  const lvl = levelFromXp(judgeCareer.xp);
+  const titleInfo = titleForLevel(lvl);
+  const logSum = caseLogSummary();
+  const careerHtml = `<div class="lawtext">🎖️ ${tr('경력','Career')}: Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} (${judgeCareer.xp} XP)<br>📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}${dailyStreakData.streak>0 ? `<br>🔥 ${tr('연속 출석','Daily Streak')}: ${dailyStreakData.streak}${tr('일',' days')} (${tr('최고 기록','best')}: ${dailyStreakData.longest||dailyStreakData.streak})` : ''}</div>`;
 
   let warrantHtml = '';
   if(warrantRuns.length){
@@ -5075,14 +5256,25 @@ function renderArchive(records, achievements, warrantRuns){
     );
   }
 
+  let appealHtml = '';
+  if(appealRuns.length){
+    const totalCases = appealRuns.reduce((s,r)=>s+r.total,0);
+    const totalCorrect = appealRuns.reduce((s,r)=>s+r.correct,0);
+    appealHtml = tr(
+      `<div class="lawtext">🏛️ 항소심 누적 기록<br>총 ${appealRuns.length}회 진행 · ${totalCases}건 중 ${totalCorrect}건 정확 판단 (${Math.round(totalCorrect/totalCases*100)}%)</div>`,
+      `<div class="lawtext">🏛️ Appeals Court Record<br>${appealRuns.length} sessions played · ${totalCorrect} of ${totalCases} judged correctly (${Math.round(totalCorrect/totalCases*100)}%)</div>`
+    );
+  }
+
   if(!records.length){
-    ov.innerHTML = `<h1>${t('records')}</h1>${badgeHtml}${warrantHtml}<p>${tr('아직 기록된 재판이 없습니다.','No trials recorded yet.')}</p><button class="btn secondary" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
+    ov.innerHTML = `<h1>${t('records')}</h1>${careerHtml}${badgeHtml}${warrantHtml}${appealHtml}<p>${tr('아직 기록된 재판이 없습니다.','No trials recorded yet.')}</p><button class="btn secondary" onclick="showCaseLogScreen()">📔 ${tr('사건 수첩 보기','View Case Log')}</button><button class="btn secondary" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
     return;
   }
   const rows = records.slice(-30).reverse().map(r=>`
     <div class="archiveRow"><b>${r.title}</b><br>${tr('선고','Sentence')}: ${r.verdict} · ${tr('결과','Result')}: ${r.resultLabel}${r.elapsedMs ? ` · ⏱ ${(r.elapsedMs/1000).toFixed(1)}${tr('초','s')}` : ''}</div>
   `).join('');
-  ov.innerHTML = `<h1>${t('records')}</h1>${badgeHtml}${warrantHtml}<div style="max-height:280px;overflow-y:auto;width:100%;max-width:340px;">${rows}</div>
+  ov.innerHTML = `<h1>${t('records')}</h1>${careerHtml}${badgeHtml}${warrantHtml}${appealHtml}<div style="max-height:280px;overflow-y:auto;width:100%;max-width:340px;">${rows}</div>
+    <button class="btn secondary" onclick="showCaseLogScreen()">📔 ${tr('사건 수첩 보기','View Case Log')}</button>
     <button class="btn secondary" onclick="clearArchive()">${tr('기록 초기화','Clear Records')}</button>
     <button class="btn" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
 }
@@ -5248,6 +5440,9 @@ function showResultOverlay(type, years, outcome, extras){
   const wasAppealFlag = state._appealUsed;
 
   recordResult(c, label + (wasAppealFlag && state._appealShown ? tr(' (항소 후 재선고)',' (re-sentenced after appeal)') : ''), outcome.kind);
+  if(state._isDailyCase){
+    markDailyPlayed().then(d=>{ dailyStreakData = d; });
+  }
   playCrowdReaction(REACTION_MAP[outcome.kind] || 'murmur');
   const npHtml = newspaperHTML(craftHeadline(c, type, years, outcome));
 
@@ -5293,6 +5488,7 @@ function showResultOverlay(type, years, outcome, extras){
       <div class="stamp" style="border-color:var(--ok);color:var(--ok);">${tr('무죄','Not Guilty')}</div>
       <h2>${tr('무죄 선고','Not Guilty Verdict')}</h2>
       <p>${tr('알리바이와 증거를 근거로 냉정하게 판단한 정당한 무죄 판결입니다. 무고한 시민이 억울한 옥살이를 면했습니다.','A fair acquittal, soundly judged on the alibi and evidence. An innocent citizen was spared a wrongful imprisonment.')}</p>
+      ${streakBadgeHtml()}
       <button class="btn" onclick="proceedNext()">${tr('다음 사건으로','Next Case')}</button>`;
     return;
   }
@@ -5342,7 +5538,7 @@ function showResultOverlay(type, years, outcome, extras){
   pushHistory(c, type, years, outcome);
 
   state.suspicion = Math.min(5, state.suspicion + bump);
-  if(bump>0) renderSuspicion(true);
+  if(bump>0 || state._comboBonusApplied) renderSuspicion(true);
 
   if(state.suspicion >= 5){
     stopBGM();
@@ -5363,7 +5559,33 @@ function showResultOverlay(type, years, outcome, extras){
     <p>${tr('선고','Sentence')}: <b>${label}</b></p>
     ${messages.join('')}
     ${bump>0 ? `<p style="color:var(--brass);">${tr('시민의심','Public Suspicion')} ${state.suspicion}/5</p>` : ''}
+    ${streakBadgeHtml()}
     <button class="btn" onclick="proceedNext()">${tr('다음 사건으로','Next Case')}</button>`;
+}
+
+function streakBadgeHtml(){
+  const parts = [];
+  const freshAch = checkForNewAchievements();
+  if(state.streak >= 2){
+    const fire = '🔥'.repeat(Math.min(state.streak, 5));
+    parts.push(`<p style="color:var(--brass);font-weight:bold;">${fire} ${tr(`${state.streak}연속 정답!`, `${state.streak}-case streak!`)}</p>`);
+  }
+  if(state._comboBonusApplied){
+    parts.push(`<p style="color:var(--ok);font-weight:bold;">✨ ${tr(`${state.streak}연속 콤보 보너스! 시민의심 -1`, `${state.streak}-streak combo bonus! Public Suspicion -1`)}</p>`);
+  }
+  if(state._lastXpGain > 0){
+    let xpLine = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
+    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
+      const t = titleForLevel(state._lastLevelUpResult.newLevel);
+      xpLine += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${t.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${t.en}`)}</p>`;
+      state._lastLevelUpResult = null;
+    }
+    parts.push(xpLine);
+  }
+  if(freshAch.length){
+    parts.push(achievementToastHtml(freshAch));
+  }
+  return parts.join('');
 }
 
 function proceedNext(){
@@ -5384,6 +5606,26 @@ function computeJudgeProfile(){
 }
 function computeAchievements(){
   return ACHIEVEMENTS.filter(a=>a.check(state.history));
+}
+let earnedAchievementIds = [];
+async function loadEarnedAchievements(){
+  try{
+    const res = await window.storage.get('achievements', false);
+    if(res && res.value) earnedAchievementIds = JSON.parse(res.value);
+  }catch(e){}
+}
+function checkForNewAchievements(){
+  const nowEarned = computeAchievements();
+  const fresh = nowEarned.filter(a=>!earnedAchievementIds.includes(a.id));
+  if(fresh.length){
+    fresh.forEach(a=> earnedAchievementIds.push(a.id));
+    saveAchievements(fresh.map(a=>a.id));
+  }
+  return fresh;
+}
+function achievementToastHtml(fresh){
+  if(!fresh || !fresh.length) return '';
+  return fresh.map(a=>`<p style="color:var(--brass);font-weight:bold;background:rgba(201,162,75,0.12);border:1px solid var(--brass-dim);border-radius:4px;padding:6px;margin-top:6px;">🏅 ${tr('업적 달성!','Achievement Unlocked!')} ${a.icon||''} ${settings.lang==='en'?a.nameEn:a.name}</p>`).join('');
 }
 
 /* ================= Share card & judgment document ================= */
@@ -5513,6 +5755,9 @@ function forceReturnToTitle(){
   el('summaryBtn').style.display='none';
   tutorialMode = false;
   singleCaseMode = false;
+  state._isDailyCase = false;
+  state._appealFlowActive = false;
+  state._appealResentencing = false;
   showTitle();
 }
 
@@ -5531,21 +5776,47 @@ function showTitle(){
   syncHudLabels();
   const ov = el('overlay');
   ov.style.display='flex';
+  const lvl = levelFromXp(judgeCareer.xp);
+  const titleInfo = titleForLevel(lvl);
+  const xpIntoLevel = judgeCareer.xp % XP_PER_LEVEL;
+  const streakN = dailyStreakData.streak || 0;
+  const logSum = caseLogSummary();
   ov.innerHTML = `
     <img src="icon-512.png" alt="Mini Court logo" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
     <h1>미니법정${settings.lang==='en' ? ' <span style="font-size:14px;color:var(--parchment-dim);">(Mini Court)</span>' : ''}</h1>
     <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:8px;">🌐 언어 (Language)</button>
+    <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP)</span></div>
     <p style="font-size:12px;color:var(--brass);margin-bottom:2px;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
-    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:10px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
+    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:6px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
+    <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:10px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
     <p>${t('titleIntro')}</p>
     <p style="font-size:11px;color:var(--parchment-dim);">${t('titleWarn')}</p>
     <button class="btn" onclick="handleStartTrialClick()">${t('startTrial')}</button>
+    <button class="btn secondary" onclick="handleStartAppealClick()">${t('startAppeal')}</button>
+    <button class="btn secondary" onclick="startDailyCase()">📅 ${t('dailyCaseLabel')}${streakN>0 ? ` 🔥${streakN}` : ''}</button>
     <button class="btn secondary" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
     <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
     <div class="credit">제작: 최한민</div>
     <div class="credit" style="font-size:13px;margin-top:2px;">Created By Choi Hanmin</div>
     <div class="verline">ver 1.0.0.0</div>`;
+}
+
+function startDailyCase(){
+  showLegalDisclaimer(()=>{
+    ensureAudio();
+    state.suspicion = 0;
+    state.caseIdx = -1;
+    state.history = [];
+    state.streak = 0;
+    state.maxStreak = 0;
+    renderSuspicion();
+    activeCaseList = [getDailyCase()];
+    singleCaseMode = true;
+    state._isDailyCase = true;
+    el('overlay').style.display='none';
+    nextCase();
+  });
 }
 
 function showDifficultySelect(){
@@ -5852,6 +6123,314 @@ function showWarrantSummary(){
   ov.innerHTML = `<h1>${tr('영장실질심사 종료','Hearings Concluded')}</h1><p>${tr(`총 ${results.length}건 중 ${correct}건을 적절하게 판단했습니다.`, `You judged ${correct} out of ${results.length} cases appropriately.`)}</p><button class="btn" onclick="showTitle()">${tr('처음 화면으로','Return to Title')}</button>`;
 }
 
+/* ================= 항소심 모드 ================= */
+const APPEAL_REASON_KO = {
+  fair: ['제1심은 제출된 증거와 정상관계를 종합적으로 고려하여 형을 정하였다.','원심은 죄질과 피해 정도, 반성 여부를 종합적으로 참작하였다.'],
+  correct_acquittal: ['제1심은 알리바이와 증거를 면밀히 검토한 끝에 무죄를 선고하였다.','원심은 합리적 의심을 배제할 증거가 부족하다고 판단하였다.'],
+  mild_lenient: ['원심은 피고인의 반성과 초범이라는 점을 다소 폭넓게 고려하였다.','제1심은 정상참작 사유를 후하게 반영한 것으로 보인다.'],
+  mild_harsh: ['원심은 범행의 죄질을 다소 엄격하게 평가한 것으로 보인다.','제1심은 재범 방지 목적을 강조하여 형을 정하였다.'],
+  suspicion: ['원심은 증거가 충분하지 않다고 보아 무죄를 선고하였다.','제1심은 유죄의 확신에 이르지 못했다고 판단하였다.'],
+  distortion_innocent: ['원심은 정황증거만으로 유죄를 인정하였다.','제1심은 제한된 증거에도 불구하고 유죄로 판단하였다.'],
+  distortion_harsh: ['원심은 죄질에 비해 이례적으로 무거운 형을 선고하였다.','제1심은 여론을 의식한 듯 매우 엄중한 형을 정하였다.'],
+  distortion_lenient: ['원심은 중대한 범죄임에도 상당히 가벼운 형을 선고하였다.','제1심은 정상참작 사유를 지나치게 폭넓게 인정하였다.'],
+  distortion_illegal: ['원심은 이 사건에 적용할 수 없는 형을 선고하였다.','제1심은 법정형의 범위를 벗어난 판결을 내렸다.']
+};
+const APPEAL_REASON_EN = {
+  fair: ['The first-instance court weighed the evidence and mitigating circumstances together in setting the sentence.','The lower court took into account the severity of the offense, the harm caused, and the defendant\'s remorse.'],
+  correct_acquittal: ['The first-instance court closely examined the alibi and evidence before entering an acquittal.','The lower court found the evidence insufficient to exclude reasonable doubt.'],
+  mild_lenient: ['The lower court appears to have given considerable weight to the defendant\'s remorse and lack of prior record.','The first-instance court seems to have applied mitigating factors generously.'],
+  mild_harsh: ['The lower court appears to have judged the severity of the offense somewhat strictly.','The first-instance court emphasized deterrence in setting the sentence.'],
+  suspicion: ['The lower court found the evidence insufficient and entered an acquittal.','The first-instance court concluded it could not reach certainty of guilt.'],
+  distortion_innocent: ['The lower court found guilt based on circumstantial evidence alone.','The first-instance court convicted despite limited evidence.'],
+  distortion_harsh: ['The lower court handed down an unusually severe sentence for the severity of the offense.','The first-instance court seems to have imposed a very harsh sentence, perhaps mindful of public opinion.'],
+  distortion_lenient: ['The lower court handed down a surprisingly light sentence despite the seriousness of the offense.','The first-instance court appears to have applied mitigating factors far too generously.'],
+  distortion_illegal: ['The lower court imposed a penalty not available for this offense.','The first-instance court\'s ruling fell outside the statutory range.']
+};
+
+function scoreToVerdict(score, c){
+  score = Math.max(0, score);
+  let type, years=null;
+  if(score < 0.75) type='무죄';
+  else if(score < 1.25) type='선고유예';
+  else if(score < 1.75) type='과료';
+  else if(score < 2.25) type='벌금';
+  else if(score < 2.75) type='구류';
+  else if(score < 3.5) type='집행유예';
+  else if(score < 13){ type='징역'; years=Math.min(50, Math.max(1, Math.round((score-3)/0.2))); }
+  else if(score < 15) type='무기징역';
+  else type='사형';
+  if(c.disallowed && c.disallowed.includes(type)){
+    if(type==='무죄'){ type='선고유예'; }
+    if(c.disallowed.includes(type) && !c.disallowed.includes('집행유예')){ type='집행유예'; years=null; }
+    if(c.disallowed.includes(type) && !c.disallowed.includes('징역')){ type='징역'; years=Math.max(years||3,3); }
+  }
+  return {type, years};
+}
+
+function generateOriginalVerdict(c){
+  let type, years=null;
+  const makeCorrect = Math.random() < 0.42;
+  if(c.guilty === false){
+    if(makeCorrect){ type='무죄'; }
+    else {
+      const opts = ['벌금','집행유예','징역'];
+      type = opts[Math.floor(Math.random()*opts.length)];
+      if(type==='징역') years = 1 + Math.floor(Math.random()*3);
+    }
+  } else {
+    const adj = adjustedRange(c);
+    if(makeCorrect){
+      const mid = (adj.fairMin + adj.fairMax)/2;
+      ({type, years} = scoreToVerdict(mid, c));
+    } else {
+      const roll = Math.random();
+      if(roll < 0.34){
+        const target = Math.max(0, adj.fairMin - (1 + Math.random()*1.5));
+        ({type, years} = scoreToVerdict(target, c));
+      } else if(roll < 0.67){
+        const target = adj.fairMax + (1 + Math.random()*2);
+        ({type, years} = scoreToVerdict(target, c));
+      } else {
+        type = '무죄';
+      }
+    }
+  }
+  const kindResult = judge(c, type, years);
+  const wasCorrect = (kindResult.kind==='fair' || kindResult.kind==='correct_acquittal');
+  return {type, years, kind: kindResult.kind, wasCorrect, label: verdictLabel(type, years)};
+}
+
+function buildAppealDialogueQueue(c, orig){
+  const q = [];
+  const NM = t('narratorLabel'), PROS = t('prosecutorLabel'), DEF = t('defenseLabel');
+  const origLabel = orig.label;
+
+  q.push({type:'narrator', name:NM, text:cf(c,'intro'), who:'defendant'});
+  q.push({type:'narrator', name:NM, text: tr(
+    '이 사건은 제1심에서 이미 판결이 내려졌으며, 지금 이 자리는 그 판결에 대한 항소심입니다.',
+    'This case has already been decided at first instance; this is now the appeal of that ruling.'
+  ), who:null});
+
+  if(orig.type === '무죄'){
+    q.push({type:'prosecutor', name:PROS+tr(' (항소이유)',' (Grounds for Appeal)'), text: tr(
+      `원심(1심)은 피고인에게 무죄를 선고했습니다. 그러나 검찰은 이 판단에 불복하여 항소를 제기합니다. ${cf(c,'prosOpen')} 유죄가 인정되어야 마땅합니다.`,
+      `At first instance, the defendant was acquitted. The prosecution disagrees with that finding and appeals. ${cf(c,'prosOpen')} A conviction is warranted.`
+    ), who:'pros', mood:'angry'});
+    q.push({type:'defense', name:DEF+tr(' (항소 답변)',' (Response to the Appeal)'), text: tr(
+      `원심의 무죄 판결은 정당합니다. ${cf(c,'defOpen')} 검찰의 항소는 이유 없으므로 기각되어야 합니다.`,
+      `The original acquittal was correct. ${cf(c,'defOpen')} The prosecution's appeal is without merit and should be dismissed.`
+    ), who:'def', mood:'neutral'});
+  } else if(c.guilty === false){
+    q.push({type:'defense', name:DEF+tr(' (항소이유)',' (Grounds for Appeal)'), text: tr(
+      `원심(1심)에서 피고인은 ${origLabel}을 선고받았습니다. 그러나 이는 잘못된 판결입니다. ${cf(c,'defOpen')} 피고인은 무죄입니다.`,
+      `At first instance, the defendant was sentenced to ${origLabel}. But that ruling was mistaken. ${cf(c,'defOpen')} The defendant is innocent.`
+    ), who:'def', mood:'worried'});
+    q.push({type:'prosecutor', name:PROS+tr(' (항소 답변)',' (Response to the Appeal)'), text: tr(
+      `원심의 판결(${origLabel})은 정당합니다. ${cf(c,'prosOpen')} 변호인의 항소는 이유 없으므로 기각되어야 합니다.`,
+      `The original ruling (${origLabel}) was correct. ${cf(c,'prosOpen')} The defense's appeal is without merit and should be dismissed.`
+    ), who:'pros', mood:'neutral'});
+  } else {
+    q.push({type:'prosecutor', name:PROS+tr(' (항소이유 - 양형부당)',' (Grounds for Appeal - Improper Sentencing)'), text: tr(
+      `원심(1심)에서 피고인은 ${origLabel}을 선고받았습니다. 그러나 검찰은 이 형이 지나치게 가볍다고 봅니다. ${cf(c,'prosOpen')} 항소심에서는 더 무거운 형이 선고되어야 합니다.`,
+      `At first instance, the defendant was sentenced to ${origLabel}. The prosecution believes this sentence is far too lenient. ${cf(c,'prosOpen')} A harsher sentence should be imposed on appeal.`
+    ), who:'pros', mood:'angry'});
+    q.push({type:'defense', name:DEF+tr(' (항소이유 - 양형부당)',' (Grounds for Appeal - Improper Sentencing)'), text: tr(
+      `원심(1심)에서 피고인은 ${origLabel}을 선고받았습니다. 그러나 변호인은 이 형이 지나치게 무겁다고 봅니다. ${cf(c,'defOpen')} 항소심에서는 형이 감경되어야 합니다.`,
+      `At first instance, the defendant was sentenced to ${origLabel}. The defense believes this sentence is far too harsh. ${cf(c,'defOpen')} The sentence should be reduced on appeal.`
+    ), who:'def', mood:'worried'});
+  }
+
+  if(c.rounds && c.rounds.length){
+    const idxs = c.rounds.length>=2 ? [0,1] : [0];
+    idxs.forEach(i=>{
+      const rr = cround(c,i);
+      q.push({type:'prosecutor', name:PROS, text:rr.p, who:'pros', mood:'neutral'});
+      q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood:'neutral', shift:c.rounds[i].momentum});
+    });
+  }
+
+  q.push({type:'narrator', name:NM, text: tr(
+    '양측의 주장을 들은 재판장은 원심 판결을 다시 한 번 확인합니다.',
+    'Having heard both sides, the judge now reviews the original ruling once more.'
+  ), who:null});
+
+  state.dlgQueue = q;
+}
+
+function showAppealIntro(){
+  el('evidenceBtn').style.display='none';
+  el('summaryBtn').style.display='none';
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `
+    <h1>${tr('형사재판 항소심','Criminal Appeals Court')}</h1>
+    <p style="font-size:12px;">${tr('이번엔 당신이 직접 1심 판결을 내리는 것이 아니라, 이미 내려진 원심 판결을 검토하는 항소심 재판장입니다.','This time, instead of handing down a first-instance ruling yourself, you are the appellate judge reviewing a ruling already made below.')}</p>
+    <div class="lawtext" style="text-align:left;">
+      ${tr('검사와 변호인의 공방을 들은 뒤, 원심 판결과 그 이유를 확인하고 다음 중 하나를 선택합니다.','After hearing the arguments, you will see the original ruling and its reasoning, then choose one of the following.')}<br><br>
+      ${tr('① 항소 기각 — 원심 판결이 정당하다고 보고 그대로 유지','① Dismiss the Appeal — Uphold the original ruling as correct')}<br>
+      ${tr('② 파기 — 원심 판결이 부당하다고 보고 직접 다시 판결','② Overturn — Reverse the ruling and re-sentence yourself')}
+    </div>
+    <p style="font-size:11px;color:var(--parchment-dim);">${tr('원심이 실제로 정당했는데 파기하거나, 부당했는데 그대로 유지하면 오판으로 기록됩니다.','If you overturn a ruling that was actually correct, or uphold one that was flawed, it counts as a misjudgment.')}</p>
+    <button class="btn danger" onclick="startAppealMode()">${tr('항소심 시작하기','Begin Appeals')}</button>
+    <button class="btn secondary" onclick="showTitle()">${t('back')}</button>`;
+}
+
+function startAppealMode(){
+  ensureAudio();
+  appealState = { list: shuffleArr(CASES.slice()).slice(0,10), idx:-1, correctCount:0, results:[] };
+  el('overlay').style.display='none';
+  nextAppealCase();
+}
+
+function nextAppealCase(){
+  appealState.idx++;
+  el('overlay').style.display='none';
+  el('overlay').innerHTML='';
+  if(appealState.idx >= appealState.list.length){
+    el('evidenceBtn').style.display='none';
+    el('summaryBtn').style.display='none';
+    stopBGM();
+    showAppealSummary();
+    return;
+  }
+  const c = appealState.list[appealState.idx];
+  state.currentCase = c;
+  state._appealFlowActive = true;
+  state._caseStartTime = Date.now();
+  appealState.currentOriginal = generateOriginalVerdict(c);
+  el('caseLabel').textContent = cf(c,'title');
+  el('verdictPanel').style.display='none';
+  state.opinion = 50;
+  renderGauge();
+  redrawRole('defendant','worried');
+  redrawRole('pros','neutral');
+  redrawRole('def','neutral');
+  playEnterAnimation();
+  el('evidenceBtn').style.display = c.evidence ? 'inline-block' : 'none';
+  el('summaryBtn').style.display = 'inline-block';
+  startBGM('ambient', c.tag);
+  playDoorSfx();
+  buildAppealDialogueQueue(c, appealState.currentOriginal);
+  state.dlgPos = 0;
+  playQueue();
+}
+
+function showAppealVerdictReveal(){
+  const ov = el('overlay');
+  ov.style.display='flex';
+  const orig = appealState.currentOriginal;
+  const reasonPool = (settings.lang==='en' ? APPEAL_REASON_EN : APPEAL_REASON_KO)[orig.kind] || [tr('원심은 증거와 정상을 종합적으로 고려하였다.','The lower court weighed the evidence and circumstances together.')];
+  const reason = reasonPool[Math.floor(Math.random()*reasonPool.length)];
+  ov.innerHTML = `
+    <h1>${tr('원심 판결 확인','Confirming the Original Ruling')}</h1>
+    <div class="lawtext">${tr('원심(1심) 주문','First-Instance Order')}: <b>${orig.label}</b><br><span style="font-size:11px;color:var(--parchment-dim);">${reason}</span></div>
+    <p style="font-size:11px;">${tr('양측의 항소이유를 들었습니다. 이 판결을 유지하시겠습니까, 파기하시겠습니까?','You have heard both sides\' grounds for appeal. Will you uphold this ruling, or overturn it?')}</p>
+    <button class="btn secondary" onclick="decideAppeal('uphold')">${tr('항소 기각 (원심 유지)','Dismiss Appeal (Uphold)')}</button>
+    <button class="btn danger" onclick="decideAppeal('overturn')">${tr('파기 (재판결)','Overturn (Re-sentence)')}</button>`;
+}
+
+function decideAppeal(choice){
+  const c = state.currentCase;
+  const orig = appealState.currentOriginal;
+  el('overlay').style.display='none';
+  if(choice==='uphold'){
+    const correct = orig.wasCorrect;
+    appealState.results.push({title:cf(c,'title'), originalLabel:orig.label, decision:'uphold', correct});
+    if(correct) appealState.correctCount++;
+    playGavel();
+    playGavelSlamFX();
+    setTimeout(()=>{ showAppealJudgmentResult(correct); }, 500);
+  } else {
+    const correct = !orig.wasCorrect;
+    appealState.results.push({title:cf(c,'title'), originalLabel:orig.label, decision:'overturn', correct});
+    if(correct) appealState.correctCount++;
+    appealState._lastOverturnWasRight = correct;
+    state._appealResentencing = true;
+    startBGM('verdict');
+    openVerdictPanel();
+  }
+}
+
+function showAppealJudgmentResult(correct){
+  const xp = correct ? 12 : 0;
+  state._lastXpGain = xp;
+  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  playCrowdReaction(correct ? 'clap' : 'boo');
+  const ov = el('overlay');
+  ov.style.display='flex';
+  const resultLine = correct
+    ? tr('정확한 판단입니다. 원심은 실제로 정당한 판결이었습니다.','Correct call. The original ruling was, in fact, sound.')
+    : tr('오판입니다. 원심은 사실 문제가 있는 판결이었습니다.','Misjudgment. The original ruling was actually flawed.');
+  let xpHtml = '';
+  if(state._lastXpGain>0){
+    xpHtml = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
+    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
+      const ti = titleForLevel(state._lastLevelUpResult.newLevel);
+      xpHtml += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${ti.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${ti.en}`)}</p>`;
+      state._lastLevelUpResult = null;
+    }
+  }
+  ov.innerHTML = `
+    <div class="stamp" style="border-color:${correct?'var(--ok)':'var(--danger)'};color:${correct?'var(--ok)':'var(--danger)'};">${tr('항소 기각','Appeal Dismissed')}</div>
+    <h2>${resultLine}</h2>
+    ${xpHtml}
+    <button class="btn" onclick="nextAppealCase()">${tr('다음 사건으로','Next Case')}</button>`;
+}
+
+function showAppealResentenceResult(type, years, outcome, extras){
+  state._appealResentencing = false;
+  const label = verdictLabel(type, years, extras);
+  const wasOverturnRight = appealState._lastOverturnWasRight;
+  const last = appealState.results[appealState.results.length-1];
+  if(last){ last.newLabel = label; }
+  const xp = xpForOutcome(outcome.kind) + (wasOverturnRight ? 5 : 0);
+  state._lastXpGain = xp;
+  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  playCrowdReaction(REACTION_MAP[outcome.kind] || 'murmur');
+  const ov = el('overlay');
+  ov.style.display='flex';
+  const verdictNote = wasOverturnRight
+    ? tr('원심의 오류를 정확히 짚어낸 파기였습니다.','A well-founded reversal that correctly caught a flawed original ruling.')
+    : tr('원심이 실제로는 정당했던 판결을 불필요하게 파기했습니다.','This overturned a ruling that was, in fact, already correct — an unnecessary reversal.');
+  let xpHtml = '';
+  if(state._lastXpGain>0){
+    xpHtml = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
+    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
+      const ti = titleForLevel(state._lastLevelUpResult.newLevel);
+      xpHtml += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${ti.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${ti.en}`)}</p>`;
+      state._lastLevelUpResult = null;
+    }
+  }
+  ov.innerHTML = `
+    <div class="stamp" style="border-color:${wasOverturnRight?'var(--ok)':'var(--danger)'};color:${wasOverturnRight?'var(--ok)':'var(--danger)'};">${tr('파기환송','Overturned')}</div>
+    <h2>${tr('새 판결','New Sentence')}: ${label}</h2>
+    <p style="font-size:12px;">${verdictNote}</p>
+    ${xpHtml}
+    <button class="btn" onclick="nextAppealCase()">${tr('다음 사건으로','Next Case')}</button>`;
+}
+
+async function saveAppealResults(results, correct){
+  try{
+    let all = [];
+    try{
+      const res = await window.storage.get('appealArchive', false);
+      if(res && res.value) all = JSON.parse(res.value);
+    }catch(e){ all = []; }
+    all.push({ts:Date.now(), total:results.length, correct, items:results.map(r=>({title:r.title, originalLabel:r.originalLabel, decision:r.decision, correct:r.correct, newLabel:r.newLabel||null}))});
+    await window.storage.set('appealArchive', JSON.stringify(all), false);
+  }catch(e){}
+}
+
+function showAppealSummary(){
+  state._appealFlowActive = false;
+  const results = appealState.results;
+  const correct = appealState.correctCount;
+  saveAppealResults(results, correct);
+  const ov = el('overlay');
+  ov.style.display='flex';
+  ov.innerHTML = `<h1>${tr('항소심 종료','Appeals Concluded')}</h1><p>${tr(`총 ${results.length}건 중 ${correct}건을 정확하게 판단했습니다.`, `You judged ${correct} out of ${results.length} cases correctly.`)}</p><button class="btn" onclick="showTitle()">${tr('처음 화면으로','Return to Title')}</button>`;
+}
+
 /* ================= Init ================= */
 document.querySelectorAll('.vbtn').forEach(b=>{
   b.addEventListener('click', ()=>handleVerdictClick(b.dataset.v));
@@ -5884,6 +6463,9 @@ renderSuspicion();
 renderGauge();
 loadSettings();
 loadJudgeName();
+Promise.all([loadJudgeCareer(), loadDailyStreak(), loadCaseLog(), loadEarnedAchievements()]).then(()=>{
+  if(el('overlay').innerHTML.includes(t('startTrial'))) showTitle();
+});
 showTitle();
 
 setTimeout(()=>{

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>미니법정</title>
+<title>미니법정(Mini Court)</title>
 <meta name="description" content="형사재판 판사가 되어 검사·변호인의 공방을 듣고 최종 판결을 내리는 도트 스타일 미니게임">
 <meta name="theme-color" content="#2b1c12">
 <link rel="manifest" href="manifest.json">
@@ -497,8 +497,8 @@
   <div id="overlay" class="overlay" style="display:none;"></div>
 
   <div id="bootSplash">
-    <img src="icon-512.png" alt="미니법정" onerror="this.style.display='none'">
-    <div class="boot-title">미니법정</div>
+    <img src="icon-512.png" alt="미니법정(Mini Court)" onerror="this.style.display='none'">
+    <div class="boot-title">미니법정<span style="font-size:0.5em;display:block;margin-top:2px;">(Mini Court)</span></div>
     <div class="boot-credit">제작: 최한민</div>
     <div class="boot-credit-en">Created By Choi Hanmin</div>
   </div>
@@ -507,7 +507,7 @@
 
 <script>
 /* ============================================================
-   미니법정 - Mini Court  ver 1.0.0.0
+   미니법정(Mini Court)  ver 1.0.0.0
    제작자: 최한민
    ============================================================ */
 
@@ -5783,7 +5783,7 @@ function showTitle(){
   const logSum = caseLogSummary();
   ov.innerHTML = `
     <img src="icon-512.png" alt="Mini Court logo" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
-    <h1>미니법정${settings.lang==='en' ? ' <span style="font-size:14px;color:var(--parchment-dim);">(Mini Court)</span>' : ''}</h1>
+    <h1>미니법정<span style="font-size:14px;color:var(--parchment-dim);">(Mini Court)</span></h1>
     <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:8px;">🌐 언어 (Language)</button>
     <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP)</span></div>
     <p style="font-size:12px;color:var(--brass);margin-bottom:2px;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>

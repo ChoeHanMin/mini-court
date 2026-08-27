@@ -410,7 +410,33 @@
   .rowbtns{display:flex;gap:10px;}
 
   #footNote{font-size:10px;color:var(--parchment-dim);text-align:center;margin-top:10px;opacity:0.8;}
+
+  /* 가로모드 안내 오버레이: 이 게임은 세로 전용으로 설계되어, 가로 회전 시
+     레이아웃이 깨지는 대신 회전 안내 화면만 표시함 (M-03 대응) */
+  #rotateGuard{
+    display:none;
+    position:fixed; inset:0; z-index:9999;
+    background:#0d0805;
+    color:var(--parchment);
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+  }
+  #rotateGuard .rotate-icon{ font-size:48px; margin-bottom:16px; animation:rotateHint 1.6s ease-in-out infinite; }
+  #rotateGuard p{ font-size:14px; color:var(--parchment-dim); max-width:280px; }
+  @keyframes rotateHint{
+    0%,100%{ transform:rotate(0deg); }
+    50%{ transform:rotate(-90deg); }
+  }
+  @media (orientation: landscape) and (max-height: 500px){
+    #rotateGuard{ display:flex; }
+    #stage{ display:none; }
+  }
 </style>
+<div id="rotateGuard">
+  <div class="rotate-icon">📱</div>
+  <h1 style="font-size:16px;">화면을 세로로 돌려주세요</h1>
+  <p>Please rotate your device to portrait mode.<br>미니법정은 세로 모드 전용으로 설계되었습니다.<br>This game is designed for portrait mode only.</p>
+</div>
 </head>
 <body>
 <div id="stage">
@@ -447,6 +473,7 @@
   </div>
 
   <div id="dialogueBox" class="clickable">
+    <div id="dProgress" style="font-size:9px;color:var(--parchment-dim);text-align:right;margin-bottom:2px;"></div>
     <div id="dSpeaker" class="narrator">나레이션</div>
     <div id="dText">불러오는 중...</div>
     <div id="dNext">▶ 탭하여 계속</div>
@@ -659,12 +686,54 @@ function caseLogSummary(){
   const perfect = entries.filter(s=>s===3).length;
   return {done, perfect, total: CASES.length};
 }
+let caseLogFilter = 'all';
+let caseLogSearchTerm = '';
 function showCaseLogScreen(){
   el('evidenceBtn').style.display='none';
   el('summaryBtn').style.display='none';
   const ov = el('overlay');
   ov.style.display='flex';
-  const rows = CASES.map(c=>{
+  const logSum = caseLogSummary();
+  ov.innerHTML = `<h1>📔 ${tr('사건 수첩','Case Log')}</h1>
+    <p style="font-size:11px;color:var(--parchment-dim);">${tr(`총 ${logSum.total}건 중 ${logSum.done}건 기록 · 완벽 판결 ⭐${logSum.perfect}건`, `${logSum.done} of ${logSum.total} cases logged · ${logSum.perfect} perfect rulings ⭐`)}</p>
+    <p style="font-size:10px;color:var(--parchment-dim);">${tr('⭐⭐⭐ 적정 판결 · ⭐⭐ 다소 관대/과중 · ⭐ 부당 무죄','⭐⭐⭐ Fair ruling · ⭐⭐ Somewhat lenient/harsh · ⭐ Unjust acquittal')}</p>
+    <input id="caseLogSearch" type="text" placeholder="${tr('사건 이름으로 검색...','Search by case title...')}"
+      style="width:100%;max-width:320px;padding:8px;font-size:12px;text-align:center;
+      background:rgba(0,0,0,0.3);border:1px solid var(--brass-dim);color:var(--parchment);
+      margin:8px 0 6px;border-radius:2px;font-family:inherit;" value="${caseLogSearchTerm.replace(/"/g,'&quot;')}">
+    <div class="btnrow" style="flex-wrap:wrap;justify-content:center;">
+      <button class="btn secondary small" onclick="setCaseLogFilter('all')" style="${caseLogFilter==='all'?'outline:2px solid var(--brass);':''}">${tr('전체','All')}</button>
+      <button class="btn secondary small" onclick="setCaseLogFilter('unplayed')" style="${caseLogFilter==='unplayed'?'outline:2px solid var(--brass);':''}">${tr('미도전','Unplayed')}</button>
+      <button class="btn secondary small" onclick="setCaseLogFilter('done')" style="${caseLogFilter==='done'?'outline:2px solid var(--brass);':''}">${tr('완료','Completed')}</button>
+      <button class="btn secondary small" onclick="setCaseLogFilter('perfect')" style="${caseLogFilter==='perfect'?'outline:2px solid var(--brass);':''}">${tr('완벽 ⭐','Perfect ⭐')}</button>
+    </div>
+    <div id="caseLogRows" style="max-height:300px;overflow-y:auto;width:100%;max-width:340px;margin-top:8px;">${renderCaseLogRows()}</div>
+    <button class="btn" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
+  const searchInput = el('caseLogSearch');
+  searchInput.addEventListener('input', ()=>{
+    caseLogSearchTerm = searchInput.value;
+    el('caseLogRows').innerHTML = renderCaseLogRows();
+  });
+  setTimeout(()=>{ searchInput.focus(); searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length); }, 60);
+}
+function setCaseLogFilter(f){
+  caseLogFilter = f;
+  showCaseLogScreen();
+}
+function renderCaseLogRows(){
+  const term = caseLogSearchTerm.trim().toLowerCase();
+  const filtered = CASES.filter(c=>{
+    const stars = caseLog[c.id] || 0;
+    if(caseLogFilter==='unplayed' && stars>0) return false;
+    if(caseLogFilter==='done' && stars===0) return false;
+    if(caseLogFilter==='perfect' && stars!==3) return false;
+    if(term && !cf(c,'title').toLowerCase().includes(term)) return false;
+    return true;
+  });
+  if(!filtered.length){
+    return `<p style="font-size:11px;color:var(--parchment-dim);padding:12px;">${tr('조건에 맞는 사건이 없습니다.','No cases match this filter.')}</p>`;
+  }
+  return filtered.map(c=>{
     const stars = caseLog[c.id] || 0;
     const starHtml = stars>0 ? '⭐'.repeat(stars) + '☆'.repeat(3-stars) : tr('미도전','Not yet attempted');
     const dim = stars===0 ? 'color:var(--parchment-dim);' : '';
@@ -673,12 +742,6 @@ function showCaseLogScreen(){
       <span style="font-size:11px;white-space:nowrap;margin-left:8px;">${starHtml}</span>
     </div>`;
   }).join('');
-  const logSum = caseLogSummary();
-  ov.innerHTML = `<h1>📔 ${tr('사건 수첩','Case Log')}</h1>
-    <p style="font-size:11px;color:var(--parchment-dim);">${tr(`총 ${logSum.total}건 중 ${logSum.done}건 기록 · 완벽 판결 ⭐${logSum.perfect}건`, `${logSum.done} of ${logSum.total} cases logged · ${logSum.perfect} perfect rulings ⭐`)}</p>
-    <p style="font-size:10px;color:var(--parchment-dim);">${tr('⭐⭐⭐ 적정 판결 · ⭐⭐ 다소 관대/과중 · ⭐ 부당 무죄','⭐⭐⭐ Fair ruling · ⭐⭐ Somewhat lenient/harsh · ⭐ Unjust acquittal')}</p>
-    <div style="max-height:340px;overflow-y:auto;width:100%;max-width:340px;margin-top:8px;">${rows}</div>
-    <button class="btn" onclick="showTitle()">${tr('돌아가기','Go Back')}</button>`;
 }
 
 function withJudgeOpening(text){
@@ -699,13 +762,21 @@ function showNameInput(onDone){
       style="width:100%;max-width:260px;padding:10px;font-size:14px;text-align:center;
       background:rgba(0,0,0,0.3);border:2px solid var(--brass-dim);color:var(--parchment);
       margin:12px 0;border-radius:2px;font-family:inherit;">
+    <p id="judgeNameError" style="color:var(--danger);font-size:11px;min-height:14px;"></p>
     <button class="btn" id="judgeNameConfirm">${t('judgeRegConfirm')}</button>`;
   const input = el('judgeNameInput');
+  const errorEl = el('judgeNameError');
   el('judgeNameConfirm').addEventListener('click', ()=>{
     const val = input.value.trim();
-    saveJudgeName(val || t('judgeDefaultName'));
+    if(!val){
+      errorEl.textContent = t('judgeNameRequired');
+      input.focus();
+      return;
+    }
+    saveJudgeName(val);
     onDone();
   });
+  input.addEventListener('input', ()=>{ if(errorEl.textContent) errorEl.textContent=''; });
   input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ el('judgeNameConfirm').click(); } });
   setTimeout(()=>input.focus(), 60);
 }
@@ -807,6 +878,7 @@ const I18N = {
     footNoteLabel:'숫자 키보드로도 입력할 수 있습니다.',
     judgeRegTitle:'판사 등록', judgeRegPrompt:'당신은 판사입니다.<br>당신의 이름은 무엇입니까?',
     judgeNamePlaceholder:'이름 입력', judgeRegConfirm:'확인', judgeDefaultName:'이름 없는 판사',
+    judgeNameRequired:'이름을 입력해 주세요.',
     judgeStatusRegistered:'현재 판사', judgeStatusUnregistered:'판사 이름이 아직 등록되지 않았습니다',
     judgeChangeBtn:'변경', judgeSetBtn:'등록',
     titleIntro:'당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.',
@@ -839,6 +911,7 @@ const I18N = {
     footNoteLabel:'You can also enter numbers using your keyboard.',
     judgeRegTitle:'Judge Registration', judgeRegPrompt:'You are the judge.<br>What is your name?',
     judgeNamePlaceholder:'Enter name', judgeRegConfirm:'Confirm', judgeDefaultName:'Unnamed Judge',
+    judgeNameRequired:'Please enter a name.',
     judgeStatusRegistered:'Presiding Judge', judgeStatusUnregistered:'No judge name registered yet',
     judgeChangeBtn:'Change', judgeSetBtn:'Set',
     titleIntro:'You are a criminal court judge.<br>Listen to the prosecution and defense,<br>then hand down the final verdict.',
@@ -4880,11 +4953,17 @@ function buildDialogueQueue(c){
 
 function playQueue(){
   if(state.dlgPos >= state.dlgQueue.length){
+    el('dProgress').textContent = '';
     if(state._appealFlowActive){ showAppealVerdictReveal(); }
     else { showLawCard(); }
     return;
   }
   const item = state.dlgQueue[state.dlgPos];
+  const total = state.dlgQueue.length;
+  el('dProgress').textContent = tr(
+    `판결까지 ${state.dlgPos+1}/${total}`,
+    `Toward sentencing: ${state.dlgPos+1}/${total}`
+  );
   showDialogue(item, ()=>{
     if(item.shift) updateGauge(item.shift);
     state.dlgPos++;
@@ -5784,7 +5863,7 @@ function showTitle(){
   ov.innerHTML = `
     <img src="icon-512.png" alt="Mini Court logo" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
     <h1>미니법정<span style="font-size:14px;color:var(--parchment-dim);">(Mini Court)</span></h1>
-    <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:8px;">🌐 언어 (Language)</button>
+    <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:8px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
     <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP)</span></div>
     <p style="font-size:12px;color:var(--brass);margin-bottom:2px;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
     <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:6px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
@@ -5973,10 +6052,15 @@ function nextWarrantCase(){
 
 function playWarrantQueue(){
   if(warrantPos >= warrantQueue.length){
+    el('dProgress').textContent = '';
     showWarrantDecisionPanel();
     return;
   }
   const item = warrantQueue[warrantPos];
+  el('dProgress').textContent = tr(
+    `구속 여부 판단까지 ${warrantPos+1}/${warrantQueue.length}`,
+    `Toward the detention decision: ${warrantPos+1}/${warrantQueue.length}`
+  );
   showDialogue(item, ()=>{
     warrantPos++;
     playWarrantQueue();

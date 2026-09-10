@@ -306,14 +306,27 @@
   #dSpeaker.narrator{color:var(--brass);border-color:var(--brass);}
   #dSpeaker.defendant{color:#e8d2a0;border-color:var(--brass-dim);}
   #dSpeaker.judge{color:var(--parchment);border-color:var(--parchment-dim);}
-  #dText{font-size:13.5px;line-height:1.55;min-height:56px;}
+  #dText{font-size:13.5px;line-height:1.55;min-height:56px;padding-bottom:20px;}
   #dNext{
     position:absolute; right:14px; bottom:10px;
     font-size:10px; color:var(--brass); letter-spacing:1px;
     animation:blink 1.1s infinite;
+    background:linear-gradient(180deg,rgba(21,12,6,0) 0%,rgba(21,12,6,0.9) 45%);
+    padding:4px 0 2px 24px;
+    pointer-events:none;
   }
   @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.15;}}
   #dialogueBox.clickable{cursor:pointer;}
+  #dChoiceBar{display:none;margin-top:8px;}
+  .choiceBtn{
+    display:block;width:100%;
+    background:linear-gradient(180deg,var(--brass),var(--brass-dim));
+    color:#231a12;border:2px solid #1a1410;font-family:inherit;font-weight:bold;
+    letter-spacing:0.5px;padding:8px 12px;margin-top:6px;font-size:12px;cursor:pointer;
+    box-shadow:0 2px 0 #1a1410;
+  }
+  .choiceBtn:active{transform:translateY(2px);box-shadow:none;}
+  .choiceBtn.secondary{background:linear-gradient(180deg,#4a3a2a,#2a1f16);color:var(--parchment);}
 
   /* ---------- Overlays ---------- */
   .overlay{
@@ -357,11 +370,39 @@
   }
   .btn.danger{background:linear-gradient(180deg,var(--crimson-light),var(--crimson));color:#fff;}
   .btn.small{width:auto;max-width:none;padding:8px 12px;font-size:11px;}
+  .btn.tight{padding:6px 18px;margin-top:4px;font-size:12.5px;}
   .credit{font-size:16px;color:var(--brass);letter-spacing:2px;margin-top:22px;font-weight:bold;}
   .verline{font-size:10px;color:var(--brass-dim);letter-spacing:2px;margin-top:2px;}
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
     width:100%;max-width:320px;text-align:left;background:rgba(0,0,0,0.25);
+    display:flex;gap:10px;align-items:flex-start;
+  }
+  .ev-body{flex:1;min-width:0;}
+  .ev-thumb{
+    flex-shrink:0;width:48px;height:48px;position:relative;
+    display:flex;align-items:center;justify-content:center;font-size:20px;
+  }
+  .ev-thumb.doc{
+    background:var(--parchment);border:1px solid var(--brass-dim);border-radius:2px;
+    flex-direction:column;justify-content:flex-end;padding:3px 4px 4px;
+  }
+  .ev-thumb.doc::before{
+    content:'';position:absolute;top:0;right:0;
+    border-style:solid;border-width:0 9px 9px 0;
+    border-color:transparent var(--parchment-dim) transparent transparent;
+  }
+  .ev-thumb.doc .ev-icon{font-size:15px;margin-bottom:3px;}
+  .ev-thumb.doc .ev-doc-line{width:78%;height:2px;background:var(--brass-dim);margin-bottom:2px;opacity:0.7;}
+  .ev-thumb.photo{
+    background:#0a0603;border:2px solid var(--brass-dim);border-radius:2px;
+  }
+  .ev-thumb.photo::before{
+    content:'';position:absolute;top:3px;left:4px;width:5px;height:5px;
+    border-radius:50%;background:var(--crimson-light);box-shadow:0 0 3px var(--crimson-light);
+  }
+  .ev-thumb.object{
+    background:rgba(0,0,0,0.3);border:2px dashed var(--brass-dim);border-radius:50%;
   }
   .archiveRow{font-size:11px;border-bottom:1px solid var(--brass-dim);padding:6px 2px;text-align:left;width:100%;max-width:340px;}
   .newspaper{
@@ -477,6 +518,7 @@
     <div id="dSpeaker" class="narrator">나레이션</div>
     <div id="dText">불러오는 중...</div>
     <div id="dNext">▶ 탭하여 계속</div>
+    <div id="dChoiceBar"></div>
   </div>
 
   <!-- Verdict Panel -->
@@ -534,9 +576,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.0.0.0
+   미니법정(Mini Court)  ver 1.0.2.0
    제작자: 최한민
    ============================================================ */
+const GAME_VERSION = '1.0.2.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -882,7 +925,7 @@ const I18N = {
     judgeStatusRegistered:'현재 판사', judgeStatusUnregistered:'판사 이름이 아직 등록되지 않았습니다',
     judgeChangeBtn:'변경', judgeSetBtn:'등록',
     titleIntro:'당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.',
-    titleWarn:"무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br><br>죄를 지은 자를 함부로 풀어주면<br>시민들의 의심을 사게 됩니다.",
+    titleWarn:"무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br>죄를 지은 자를 함부로 풀어주면 시민들의 의심을 사게 됩니다.",
     startWarrantLabel:'⚖️ 구속영장 실질심사 시작',
     disclaimerLine:'⚖️ 이 게임은 대한민국 형사소송법을 기준으로 제작되었습니다.',
     disclaimerLineEn:'⚖️ This game is based on the criminal procedure law of the Republic of Korea (South Korea).',
@@ -915,7 +958,7 @@ const I18N = {
     judgeStatusRegistered:'Presiding Judge', judgeStatusUnregistered:'No judge name registered yet',
     judgeChangeBtn:'Change', judgeSetBtn:'Set',
     titleIntro:'You are a criminal court judge.<br>Listen to the prosecution and defense,<br>then hand down the final verdict.',
-    titleWarn:"Convict an innocent person, or hand down<br>a sentence wildly out of line with the crime,<br>and you'll be charged with 'perverting the course of justice.'<br><br>Release the guilty too easily,<br>and the public's suspicion will fall on you.",
+    titleWarn:"Convict an innocent person, or hand down<br>a sentence wildly out of line with the crime,<br>and you'll be charged with 'perverting the course of justice.'<br>Release the guilty too easily, and the public's suspicion will fall on you.",
     startWarrantLabel:'⚖️ Start Pre-Detention Hearing',
     disclaimerLine:'⚖️ 이 게임은 대한민국 형사소송법을 기준으로 제작되었습니다.',
     disclaimerLineEn:'⚖️ This game is based on the criminal procedure law of the Republic of Korea (South Korea).',
@@ -1198,6 +1241,11 @@ function applyMood(colorGrid, mood){
     colorGrid[4][7] = '#2a1a12';
     colorGrid[2][5] = '#2a1010';
     colorGrid[2][7] = '#2a1010';
+  } else if(mood==='flustered'){
+    colorGrid[2][2] = '#8fc7e8';
+    colorGrid[3][10] = '#8fc7e8';
+    colorGrid[4][6] = '#a83c4a';
+    colorGrid[4][7] = '#a83c4a';
   }
 }
 
@@ -1286,8 +1334,19 @@ function drawSprite(canvasId, palette, opts){
       }
     }
   }
+
+  if(opts.convictNo){
+    ctx.font = `bold ${Math.max(7,Math.floor(px*0.85))}px 'Courier New',monospace`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const tagX = offX + 1*px;
+    const tagY = offY + 9.5*px;
+    ctx.fillStyle = '#e8dcc0';
+    ctx.fillText('No.'+opts.convictNo, tagX, tagY);
+  }
 }
 
+/* 기본 팔레트 (state.rolePalettes가 없을 때의 폴백) */
 const PALETTES = {
   defendant:{hair:'#4a4038', skin:'#dcb28c', outfit:'#b8925a', accent:'#3a3f55', collar:'#d8c39a'},
   pros:{hair:'#241a14', skin:'#dcb28c', outfit:'#171310', accent:'#5c1a34', collar:'#f2ede0', accent2:'#c9a24b'},
@@ -1300,10 +1359,48 @@ const ROLE_OPTS = {
   def:{glasses:true}
 };
 
+/* ================= 매 재판마다 바뀌는 외모 ================= */
+const APPEARANCE_POOLS = {
+  hair:['#4a4038','#241a14','#3a2c1c','#6b4526','#1c1610','#5c4a30','#2e2318','#7a5a3a','#463022','#8a7050','#1a1a1a','#9a8060'],
+  skin:['#dcb28c','#e2ba90','#c99a6e','#f0c8a0','#b8875e','#e8c39c','#d4a878','#f2d0aa'],
+  outfitDefendant:['#b8925a','#8a6d4a','#6e5838','#a47a48','#c9a26a','#9a8262','#7a6248'],
+  outfitPros:['#171310','#241a16','#1c140f','#2a1f18','#14100c'],
+  outfitDef:['#1e3350','#3a2c50','#2a4530','#4a2530','#25405a','#302838'],
+  accent:['#3a3f55','#5c1a34','#c9a24b','#4a2f6e','#2f5c4a','#7a2230','#3f5c7a'],
+  collar:['#d8c39a','#f2ede0','#e8dcc0','#ece1c4']
+};
+function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randomizeAppearance(){
+  state.rolePalettes = {
+    defendant:{
+      hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
+      outfit:pickFrom(APPEARANCE_POOLS.outfitDefendant), accent:pickFrom(APPEARANCE_POOLS.accent),
+      collar:pickFrom(APPEARANCE_POOLS.collar)
+    },
+    pros:{
+      hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
+      outfit:pickFrom(APPEARANCE_POOLS.outfitPros), accent:pickFrom(APPEARANCE_POOLS.accent),
+      collar:'#f2ede0', accent2:'#c9a24b'
+    },
+    def:{
+      hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
+      outfit:pickFrom(APPEARANCE_POOLS.outfitDef), accent:pickFrom(APPEARANCE_POOLS.accent),
+      collar:'#f2ede0'
+    }
+  };
+  state.roleOpts = {
+    defendant:{cuffs:true, messyHair: Math.random()<0.5, convictNo: 100+Math.floor(Math.random()*900)},
+    pros:{badge:true, robe:true, wideRobe:true},
+    def:{glasses: Math.random()<0.5}
+  };
+}
+
 function redrawRole(role, mood){
   const canvasId = role==='defendant' ? 'c-defendant' : (role==='pros' ? 'c-pros' : 'c-def');
-  const opts = Object.assign({}, ROLE_OPTS[role], {mood});
-  drawSprite(canvasId, PALETTES[role], opts);
+  const palette = (state.rolePalettes && state.rolePalettes[role]) || PALETTES[role];
+  const roleOpts = (state.roleOpts && state.roleOpts[role]) || ROLE_OPTS[role];
+  const opts = Object.assign({}, roleOpts, {mood});
+  drawSprite(canvasId, palette, opts);
 }
 
 function initSprites(){
@@ -4746,6 +4843,8 @@ let isTyping = false;
 function showDialogue(item, cb){
   const box = el('dialogueBox');
   box.style.display='block';
+  const choiceBar0 = el('dChoiceBar');
+  if(choiceBar0){ choiceBar0.style.display='none'; choiceBar0.innerHTML=''; }
   const tag = el('dSpeaker');
   tag.className = item.type;
   tag.textContent = item.name;
@@ -4800,6 +4899,69 @@ function showDialogue(item, cb){
       cb && cb();
     }
   };
+}
+
+/* ================= 위증 캐묻기(교차신문) 선택지 ================= */
+const STAMMER_LINES = [
+  {who:'defendant', ko:'그, 그건... 저는 그러니까... 저기, 그게...', en:"I- I mean... that is... well, um..."},
+  {who:'defendant', ko:'아, 아니 그게 아니라... 잠깐만요, 다시 말씀드리면...', en:"N-no, that's not it... wait, let me put it differently..."},
+  {who:'def', ko:'재판장님, 저, 잠시... 의뢰인과 상의를... 아, 아닙니다. 계속하겠습니다.', en:"Your honor, I- just a moment... I need to confer with my client... n-never mind. I'll continue."},
+  {who:'defendant', ko:'그, 그러니까 제 말은... (침묵) ...죄, 죄송합니다, 다시 말씀드리겠습니다.', en:"W-what I mean is... (silence) ...s-sorry, let me say that again."},
+  {who:'def', ko:'흠, 흠! 그, 그 부분은... 피고인과 다시 한번 확인해보겠습니다.', en:"Ahem- ahem! Th-that part, I'll... I'll need to check with my client again."}
+];
+function buildCrossExamChoice(baseShift){
+  return {
+    type:'choice',
+    baseShift: baseShift||0,
+    prompt: tr(
+      '방금 변호인 측 답변에서 미심쩍은 부분이 느껴집니다. 증거물을 근거로 다시 캐물으시겠습니까?',
+      "Something about the defense's last answer feels off. Do you want to press further, citing the evidence?"
+    ),
+    options:[
+      {label:'🔍 '+tr('증거로 되묻는다','Press with the evidence'), key:'press'},
+      {label:tr('그냥 넘어간다','Let it go'), key:'pass'}
+    ]
+  };
+}
+function buildStammerFollowUp(baseShift){
+  const pick = STAMMER_LINES[Math.floor(Math.random()*STAMMER_LINES.length)];
+  const DFT = t('defendantLabel'), DEF = t('defenseLabel');
+  const isDefendant = pick.who==='defendant';
+  return [{
+    type: isDefendant ? 'defendant' : 'defense',
+    name: isDefendant ? DFT : DEF,
+    text: tr(pick.ko, pick.en),
+    who: pick.who,
+    mood:'flustered',
+    sfx:'gasp',
+    shift: (baseShift||0) >= 0 ? 4 : -4
+  }];
+}
+function showChoice(item, cb){
+  const box = el('dialogueBox');
+  box.style.display='block';
+  box.onclick = null;
+  const tag = el('dSpeaker');
+  tag.className = 'judge';
+  tag.textContent = tr('재판장(당신)','Judge (You)');
+  setSpeakerVisual(null);
+  clearInterval(typingTimer);
+  typingTimer = null;
+  isTyping = false;
+  el('dText').textContent = item.prompt;
+  el('dNext').style.opacity = 0;
+  const bar = el('dChoiceBar');
+  bar.style.display = 'block';
+  bar.innerHTML = item.options.map((o,i)=>`<button class="choiceBtn${i>0?' secondary':''}" data-i="${i}">${o.label}</button>`).join('');
+  Array.from(bar.querySelectorAll('button')).forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      bar.style.display='none';
+      bar.innerHTML='';
+      const opt = item.options[parseInt(btn.dataset.i,10)];
+      cb(opt.key);
+    };
+  });
 }
 
 /* ================= Flow control ================= */
@@ -4904,6 +5066,7 @@ function nextCase(){
   el('verdictPanel').style.display='none';
   state.opinion = 50;
   renderGauge();
+  randomizeAppearance();
   redrawRole('defendant','worried');
   redrawRole('pros','neutral');
   redrawRole('def','neutral');
@@ -4935,6 +5098,9 @@ function buildDialogueQueue(c){
     q.push({type:'prosecutor', name:PROS, text:rr.p, who:'pros', mood: escalate?'angry':'neutral'});
     q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood: escalate?'worried':'neutral', shift:r.momentum});
   });
+  if(c.evidence && c.evidence.length && c.rounds && c.rounds.length>=2){
+    q.push(buildCrossExamChoice(c.rounds[c.rounds.length-1].momentum));
+  }
   q.push({type:'prosecutor', name:PROS+tr(' (구형)',' (Sentencing Request)'), text:withJudgeClosing(cf(c,'prosFinal'), tr('엄중한 처벌을 부탁드립니다','I ask for a stern punishment')), who:'pros', mood:'angry'});
   q.push({type:'defense', name:DEF+tr(' (최후 변론)',' (Closing Argument)'), text:withJudgeClosing(cf(c,'defFinal'), tr('부디 선처를 부탁드립니다','I ask for your leniency')), who:'def', mood:'worried'});
   q.push({type:'narrator', name:NM, text:tr('재판장이 피고인에게 마지막 진술 기회를 줍니다.','The judge gives the defendant a chance to make a final statement.'), who:'defendant'});
@@ -4964,6 +5130,17 @@ function playQueue(){
     `판결까지 ${state.dlgPos+1}/${total}`,
     `Toward sentencing: ${state.dlgPos+1}/${total}`
   );
+  if(item.type === 'choice'){
+    showChoice(item, (choiceKey)=>{
+      if(choiceKey==='press'){
+        const extra = buildStammerFollowUp(item.baseShift);
+        state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
+      }
+      state.dlgPos++;
+      playQueue();
+    });
+    return;
+  }
   showDialogue(item, ()=>{
     if(item.shift) updateGauge(item.shift);
     state.dlgPos++;
@@ -5364,6 +5541,20 @@ async function clearArchive(){
 }
 
 /* ================= Evidence viewer ================= */
+const EV_DOC_ICONS = new Set(['📋','📄','📝','🧾','✍️','📒','📚','📊','📈','📅','🖨️','🏦','🏥','🏢','🏛️','👑','🩺','🩹','🛂']);
+const EV_PHOTO_ICONS = new Set(['📹','📷','📼','🖥️','💻','📡','🌐','✈️','🚈','🚇','📱','☎️','📞','🗣️','💬','📧','🎭']);
+function evidenceCategory(icon){
+  if(EV_DOC_ICONS.has(icon)) return 'doc';
+  if(EV_PHOTO_ICONS.has(icon)) return 'photo';
+  return 'object';
+}
+function evidenceThumbHtml(icon){
+  const cat = evidenceCategory(icon);
+  if(cat==='doc'){
+    return `<div class="ev-thumb doc"><span class="ev-icon">${icon}</span><span class="ev-doc-line"></span><span class="ev-doc-line" style="width:55%;"></span></div>`;
+  }
+  return `<div class="ev-thumb ${cat}">${icon}</div>`;
+}
 function showEvidence(){
   const c = state.currentCase;
   if(!c || !c.evidence) return;
@@ -5372,8 +5563,11 @@ function showEvidence(){
   const ev = cevidence(c);
   const items = ev.map((e,i)=>`
     <div class="evidenceCard flip-in" style="animation-delay:${i*0.12}s;">
-      <div style="font-size:20px;">${e.icon} <b style="font-size:13px;">${e.name}</b></div>
-      <div style="font-size:12px;color:var(--parchment-dim);margin-top:4px;">${e.desc}</div>
+      ${evidenceThumbHtml(e.icon)}
+      <div class="ev-body">
+        <b style="font-size:13px;">${e.name}</b>
+        <div style="font-size:12px;color:var(--parchment-dim);margin-top:4px;">${e.desc}</div>
+      </div>
     </div>
   `).join('');
   ov.innerHTML = `<h1>${tr('증거물','Evidence')}</h1>${items}<button class="btn" onclick="closeEvidence()">${t('close')}</button>`;
@@ -5861,24 +6055,23 @@ function showTitle(){
   const streakN = dailyStreakData.streak || 0;
   const logSum = caseLogSummary();
   ov.innerHTML = `
-    <img src="icon-512.png" alt="Mini Court logo" style="width:96px;height:96px;border-radius:18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
-    <h1>미니법정<span style="font-size:14px;color:var(--parchment-dim);">(Mini Court)</span></h1>
-    <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:8px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
+    <img src="icon-512.png" alt="Mini Court logo" style="width:56px;height:56px;border-radius:12px;margin-bottom:4px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
+    <h1 style="font-size:18px;margin:0 0 4px;">미니법정<span style="font-size:12px;color:var(--parchment-dim);">(Mini Court)</span></h1>
+    <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:3px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
     <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP)</span></div>
-    <p style="font-size:12px;color:var(--brass);margin-bottom:2px;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
-    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:6px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
-    <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:10px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
-    <p>${t('titleIntro')}</p>
-    <p style="font-size:11px;color:var(--parchment-dim);">${t('titleWarn')}</p>
-    <button class="btn" onclick="handleStartTrialClick()">${t('startTrial')}</button>
-    <button class="btn secondary" onclick="handleStartAppealClick()">${t('startAppeal')}</button>
-    <button class="btn secondary" onclick="startDailyCase()">📅 ${t('dailyCaseLabel')}${streakN>0 ? ` 🔥${streakN}` : ''}</button>
-    <button class="btn secondary" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
-    <button class="btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
-    <button class="btn secondary" onclick="showArchive()">${t('records')}</button>
-    <div class="credit">제작: 최한민</div>
-    <div class="credit" style="font-size:13px;margin-top:2px;">Created By Choi Hanmin</div>
-    <div class="verline">ver 1.0.0.0</div>`;
+    <p style="font-size:12px;color:var(--brass);margin:0 0 2px;line-height:1.25;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
+    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:3px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
+    <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
+    <p style="font-size:12px;margin:0 0 4px;line-height:1.25;">${t('titleIntro')}</p>
+    <p style="font-size:10px;color:var(--parchment-dim);margin:0 0 4px;line-height:1.25;">${t('titleWarn')}</p>
+    <button class="btn tight" onclick="handleStartTrialClick()">${t('startTrial')}</button>
+    <button class="btn secondary tight" onclick="handleStartAppealClick()">${t('startAppeal')}</button>
+    <button class="btn secondary tight" onclick="startDailyCase()">📅 ${t('dailyCaseLabel')}${streakN>0 ? ` 🔥${streakN}` : ''}</button>
+    <button class="btn secondary tight" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
+    <button class="btn secondary tight" onclick="startTutorial()">${t('tutorial')}</button>
+    <button class="btn secondary tight" onclick="showArchive()">${t('records')}</button>
+    <div class="credit" style="font-size:11px;margin-top:8px;">제작: 최한민 · Created By Choi Hanmin</div>
+    <div class="verline" style="margin-top:1px;">ver ${GAME_VERSION}</div>`;
 }
 
 function startDailyCase(){
@@ -6033,6 +6226,7 @@ function nextWarrantCase(){
   el('summaryBtn').style.display = 'none';
   const holder = el('holder-defendant');
   holder.classList.remove('dragged-away','happy-bounce');
+  randomizeAppearance();
   redrawRole('defendant','worried');
   redrawRole('pros','neutral');
   redrawRole('def','neutral');
@@ -6386,6 +6580,7 @@ function nextAppealCase(){
   el('verdictPanel').style.display='none';
   state.opinion = 50;
   renderGauge();
+  randomizeAppearance();
   redrawRole('defendant','worried');
   redrawRole('pros','neutral');
   redrawRole('def','neutral');

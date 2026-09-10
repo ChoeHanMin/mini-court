@@ -475,42 +475,68 @@
 
   /* ================= 와이드 화면(PC/전체화면) 전용 레이아웃 =================
      휴대폰 세로 화면에는 전혀 영향 없음 (min-width/min-height 둘 다 큰 화면에서만 적용).
-     좌우 여백을 살려 변호인-피고인-검사를 화면 전체 폭에 걸쳐 배치하고,
-     글자와 인물 스프라이트를 확대함. */
+     화면을 꽉 채우고, 변호인-피고인-검사를 화면 전체 폭에 걸쳐 배치하며,
+     글자와 인물 스프라이트를 전반적으로 확대함. */
   @media (min-width: 900px) and (min-height: 600px){
     #stage{
-      width:94vw;
-      max-width:1600px;
-      max-height:min(960px, 94vh);
+      width:100vw;
+      max-width:100vw;
+      height:100vh;
+      height:100dvh;
+      max-height:100vh;
+      max-height:100dvh;
+      border-left:none;
+      border-right:none;
     }
-    #hud{ font-size:13px; padding:10px 18px; }
-    #muteBtn,#evidenceBtn,#settingsBtn,#summaryBtn,#homeBtn{ font-size:12px; padding:5px 10px; }
-    .stand-label{ font-size:13px; padding:4px 12px; }
-    #dockStand{ width:170px; }
-    .stand{ width:130px; }
-    .sprite-holder canvas{ transform:scale(1.7); transform-origin:bottom center; }
+    #hud{ font-size:16px!important; padding:12px 24px; }
+    #hud .case-label{ font-size:16px!important; }
+    #hudRight{ gap:10px; }
+    #muteBtn,#evidenceBtn,#settingsBtn,#summaryBtn,#homeBtn{ font-size:14px!important; padding:6px 12px; }
+    .eye{ width:13px; height:13px; }
+    .stand-label{ font-size:15px!important; padding:5px 14px; }
+    #dockStand{ width:200px; }
+    .stand{ width:150px; }
+    .sprite-holder canvas{ transform:scale(2.1); transform-origin:bottom center; }
+    #opinionGauge{ top:calc(16% + 10px); }
+    .gaugeLabel{ font-size:11px!important; }
+    .gaugeTrack{ height:11px; }
     #dialogueBox{
-      width:100%; max-width:680px; margin:0 auto; align-self:center;
-      padding:18px 22px 22px;
+      width:100%; max-width:820px; margin:0 auto; align-self:center;
+      padding:22px 26px 26px;
     }
-    #dSpeaker{ font-size:14px; padding:3px 10px; }
-    #dText{ font-size:19px; line-height:1.65; min-height:64px; }
-    #dProgress{ font-size:12px; }
-    #dNext{ font-size:12px; }
-    .overlay h1{ font-size:28px; }
-    .overlay h2{ font-size:18px; }
-    .overlay p{ font-size:16px; max-width:480px; }
-    .lawtext{ font-size:16px; max-width:480px; }
-    .btn{ font-size:16px; padding:13px 22px; max-width:420px; }
-    .btn.small{ font-size:13px; }
-    .btn.tight{ font-size:15px; padding:11px 22px; }
-    .evidenceCard{ max-width:480px; }
-    .ev-thumb{ width:64px; height:64px; font-size:26px; }
-    .ev-thumb.doc .ev-icon{ font-size:20px; }
-    .choiceBtn{ font-size:14px; padding:11px 16px; }
-    #verdictPanel .sub{ font-size:13px; }
-    .vbtn{ font-size:15px; padding:16px 8px; }
-    .credit{ font-size:18px; }
+    #dSpeaker{ font-size:16px!important; padding:4px 12px; }
+    #dText{ font-size:23px!important; line-height:1.65!important; min-height:74px; padding-bottom:26px; }
+    #dProgress{ font-size:14px!important; }
+    #dNext{ font-size:14px!important; }
+    .overlay{ padding:40px; }
+    .overlay h1{ font-size:34px!important; }
+    .overlay h2{ font-size:22px!important; }
+    .overlay p{ font-size:19px!important; max-width:600px!important; line-height:1.6!important; }
+    .lawtext{ font-size:19px!important; max-width:600px; padding:16px 18px; }
+    .btn{ font-size:19px!important; padding:15px 26px; max-width:520px; }
+    .btn.small{ font-size:16px!important; padding:10px 16px; }
+    .btn.tight{ font-size:18px!important; padding:13px 26px; }
+    .credit{ font-size:22px!important; }
+    .verline{ font-size:13px!important; }
+    .evidenceCard{ max-width:600px; padding:14px; }
+    .ev-thumb{ width:72px; height:72px; font-size:30px!important; }
+    .ev-thumb.doc .ev-icon{ font-size:22px!important; }
+    .ev-body b{ font-size:16px!important; }
+    .ev-body div{ font-size:15px!important; }
+    .choiceBtn{ font-size:17px!important; padding:13px 18px; }
+    #verdictPanel{ padding:26px 24px; }
+    #verdictPanel h2{ font-size:20px!important; }
+    #verdictPanel .sub{ font-size:16px!important; }
+    .vbtn{ font-size:18px!important; padding:20px 10px; }
+    #yearsDisplay{ font-size:38px!important; padding:12px 30px; }
+    #yearsHint,#footNote{ font-size:13px!important; }
+    #numpad{ grid-template-columns:repeat(3,74px); }
+    .numkey{ font-size:19px!important; padding:14px 0; }
+    .archiveRow{ font-size:14px!important; max-width:600px; }
+    .np-masthead{ font-size:14px!important; }
+    .np-headline{ font-size:20px!important; }
+    .np-sub{ font-size:13px!important; }
+    #caseLogSearch{ font-size:15px!important; }
   }
 </style>
 <div id="rotateGuard">
@@ -616,10 +642,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.0.4.0
+   미니법정(Mini Court)  ver 1.0.5.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.0.4.0';
+const GAME_VERSION = '1.0.5.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -6105,6 +6131,15 @@ function toggleQuickLang(){
   syncHudLabels();
   showTitle();
 }
+/* Electron(Steam 데스크톱) 환경에서만 window.electronAPI가 주입됨 (preload.js 참고).
+   모바일/웹 빌드에서는 undefined이므로 "게임에서 나가기" 버튼 자체가 렌더링되지 않음. */
+function quitGame(){
+  if(!(window.electronAPI && window.electronAPI.quitApp)) return;
+  if(confirm(tr('게임에서 나가시겠습니까?','Exit the game?'))){
+    window.electronAPI.quitApp();
+  }
+}
+
 function showTitle(){
   el('evidenceBtn').style.display='none';
   el('summaryBtn').style.display='none';
@@ -6134,6 +6169,7 @@ function showTitle(){
     <button class="btn secondary tight" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
     <button class="btn secondary tight" onclick="startTutorial()">${t('tutorial')}</button>
     <button class="btn secondary tight" onclick="showArchive()">${t('records')}</button>
+    ${window.electronAPI ? `<button class="btn secondary tight" onclick="quitGame()">🚪 ${tr('게임에서 나가기','Exit Game')}</button>` : ''}
     <div class="credit" style="font-size:11px;margin-top:8px;">제작: 최한민 · Created By Choi Hanmin</div>
     <div class="verline" style="margin-top:1px;">ver ${GAME_VERSION}</div>`;
 }

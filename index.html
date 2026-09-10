@@ -174,7 +174,7 @@
     filter:drop-shadow(0 4px 3px rgba(0,0,0,0.5));
     transition:filter .25s;
   }
-  .sprite-holder canvas{image-rendering:pixelated;}
+  .sprite-holder canvas{image-rendering:pixelated;transform:scale(var(--build-scale,1));transform-origin:bottom center;}
   .dim{filter:brightness(0.45) drop-shadow(0 4px 3px rgba(0,0,0,0.5));}
   .active-bounce{animation:bounce 0.7s ease-in-out infinite;}
   @keyframes dragAway{
@@ -498,7 +498,7 @@
     .stand-label{ font-size:15px!important; padding:5px 14px; }
     #dockStand{ width:200px; }
     .stand{ width:150px; }
-    .sprite-holder canvas{ transform:scale(2.1); transform-origin:bottom center; }
+    .sprite-holder canvas{ transform:scale(calc(var(--build-scale,1) * 2.1)); transform-origin:bottom center; }
     #opinionGauge{ top:calc(16% + 10px); }
     .gaugeLabel{ font-size:11px!important; }
     .gaugeTrack{ height:11px; }
@@ -644,10 +644,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.0.6.0
+   미니법정(Mini Court)  ver 1.0.7.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.0.6.0';
+const GAME_VERSION = '1.0.7.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1226,6 +1226,7 @@ const AMBIENT_NOTES_COMEDY = [392,440,493.88,440,392,349.23,392,440,523.25,493.8
 const AMBIENT_NOTES_HEAVY = [196,null,207.65,null,174.61,196,164.81,null,146.83,null,164.81,null,174.61,196,146.83,null];
 const AMBIENT_NOTES_TENSE = [220,233.08,220,207.65,220,233.08,246.94,233.08,220,207.65,196,207.65,220,233.08,246.94,261.63];
 const AMBIENT_NOTES_GRAND = [220,329.63,440,523.25,440,329.63,261.63,329.63,220,293.66,440,587.33,440,329.63,261.63,220];
+const AMBIENT_NOTES_SOMBER = [220,207.65,196,207.65,220,196,174.61,196,220,207.65,196,174.61,164.81,174.61,196,207.65];
 const VERDICT_NOTES = [110,110,146.83,110,164.81,146.83,110,98,110,110,196,164.81,146.83,130.81,110,87.31];
 
 function startBGM(mode, tag){
@@ -1239,6 +1240,9 @@ function startBGM(mode, tag){
     startCrowdMurmur();
   } else if(mode==='grand'){
     notes = AMBIENT_NOTES_GRAND; interval = 520; type = 'triangle'; vol = 0.055;
+    startCrowdMurmur();
+  } else if(mode==='somber'){
+    notes = AMBIENT_NOTES_SOMBER; interval = 650; type = 'sine'; vol = 0.045;
     startCrowdMurmur();
   } else if(tag==='comedy'){
     notes = AMBIENT_NOTES_COMEDY; interval = 340; type = 'triangle'; vol = 0.045;
@@ -1268,6 +1272,7 @@ function setSceneBGM(mood, tag){
   if(mood==='verdict') startBGM('verdict');
   else if(mood==='tense') startBGM('tense', tag);
   else if(mood==='grand') startBGM('grand', tag);
+  else if(mood==='somber') startBGM('somber', tag);
   else startBGM('ambient', tag);
   currentBgmMood = key;
 }
@@ -1333,6 +1338,11 @@ function applyMood(colorGrid, mood){
     colorGrid[2][2] = '#8fc7e8';
     colorGrid[2][10] = '#8fc7e8'; colorGrid[3][11] = '#8fc7e8';
     colorGrid[4][5] = '#a83c4a'; colorGrid[4][6] = '#a83c4a'; colorGrid[4][7] = '#a83c4a';
+  } else if(mood==='crying'){
+    colorGrid[2][4] = '#2a1a12'; colorGrid[2][5] = '#2a1a12';
+    colorGrid[2][7] = '#2a1a12'; colorGrid[2][8] = '#2a1a12';
+    colorGrid[4][5] = '#2a1a12'; colorGrid[4][6] = '#2a1a12'; colorGrid[4][7] = '#2a1a12';
+    colorGrid[5][5] = '#8fc7e8'; colorGrid[5][7] = '#8fc7e8';
   }
 }
 
@@ -1423,10 +1433,10 @@ function drawSprite(canvasId, palette, opts){
   }
 
   if(opts.convictNo){
-    ctx.font = `bold ${Math.max(7,Math.floor(px*0.85))}px 'Courier New',monospace`;
+    ctx.font = `bold ${Math.max(11,Math.floor(px*1.35))}px 'Courier New',monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const tagX = offX + 1*px;
+    const tagX = offX + 0.7*px;
     const tagY = offY + 9.5*px;
     ctx.fillStyle = '#e8dcc0';
     ctx.fillText('No.'+opts.convictNo, tagX, tagY);
@@ -1451,14 +1461,16 @@ const APPEARANCE_POOLS = {
   hair:['#4a4038','#241a14','#3a2c1c','#6b4526','#1c1610','#5c4a30','#2e2318','#7a5a3a','#463022','#8a7050','#1a1a1a','#9a8060','#c9a24b','#6b2f2f','#403050','#d8d0c0'],
   skin:['#dcb28c','#e2ba90','#c99a6e','#f0c8a0','#b8875e','#e8c39c','#d4a878','#f2d0aa','#a67550','#8a5a3c','#f5ddb8'],
   outfitDefendant:['#b8925a','#8a6d4a','#6e5838','#a47a48','#c9a26a','#9a8262','#7a6248','#4a5a4a','#5a4a5a','#3a4a5a'],
-  outfitPros:['#171310','#241a16','#1c140f','#2a1f18','#14100c','#241028','#1a2028'],
   outfitDef:['#1e3350','#3a2c50','#2a4530','#4a2530','#25405a','#302838','#403a20','#502a2a'],
   accent:['#3a3f55','#5c1a34','#c9a24b','#4a2f6e','#2f5c4a','#7a2230','#3f5c7a','#8a6d33','#2a2a2a'],
   collar:['#d8c39a','#f2ede0','#e8dcc0','#ece1c4','#dcd4c0']
 };
+/* 검사는 항상 자주색 검사복 고정 (얼굴·체형은 랜덤이어도 옷은 안 바뀜) */
+const PROS_OUTFIT_COLOR = '#4a1240';
+const PROS_ACCENT_COLOR = '#6b1f52';
 function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randomBuildScale(){ return (0.88 + Math.random()*0.4).toFixed(2); }
 function randomizeAppearance(){
-  const defRobe = Math.random()<0.5;
   state.rolePalettes = {
     defendant:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
@@ -1467,7 +1479,7 @@ function randomizeAppearance(){
     },
     pros:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
-      outfit:pickFrom(APPEARANCE_POOLS.outfitPros), accent:pickFrom(APPEARANCE_POOLS.accent),
+      outfit:PROS_OUTFIT_COLOR, accent:PROS_ACCENT_COLOR,
       collar:pickFrom(APPEARANCE_POOLS.collar), accent2:pickFrom(APPEARANCE_POOLS.accent)
     },
     def:{
@@ -1476,10 +1488,11 @@ function randomizeAppearance(){
       collar:pickFrom(APPEARANCE_POOLS.collar)
     }
   };
+  const defRobe = Math.random()<0.5;
   state.roleOpts = {
-    defendant:{cuffs:true, messyHair: Math.random()<0.5, glasses: Math.random()<0.3, convictNo: 100+Math.floor(Math.random()*900)},
-    pros:{badge:true, robe:true, wideRobe: Math.random()<0.7},
-    def:{glasses: Math.random()<0.5, robe: defRobe, wideRobe: defRobe}
+    defendant:{cuffs: Math.random()<0.6, messyHair: Math.random()<0.5, glasses: Math.random()<0.3, convictNo: 100+Math.floor(Math.random()*900), scale:randomBuildScale()},
+    pros:{badge:true, robe:true, wideRobe:true, scale:randomBuildScale()},
+    def:{glasses: Math.random()<0.5, robe: defRobe, wideRobe: defRobe, scale:randomBuildScale()}
   };
 }
 
@@ -1489,6 +1502,8 @@ function redrawRole(role, mood){
   const roleOpts = (state.roleOpts && state.roleOpts[role]) || ROLE_OPTS[role];
   const opts = Object.assign({}, roleOpts, {mood});
   drawSprite(canvasId, palette, opts);
+  const cv = document.getElementById(canvasId);
+  if(cv) cv.style.setProperty('--build-scale', opts.scale || 1);
 }
 
 function initSprites(){
@@ -4944,6 +4959,10 @@ function showDialogue(item, cb){
   } else if(item.who==='defendant' && item.type==='defendant'){
     redrawRole('defendant', item.mood||'worried');
   }
+  // 피고인은 말을 하지 않는 순간에도 조용히 반응함 (검사/변호인 발언 중 표정 변화)
+  if(item.defendantMood && !(item.who==='defendant' && item.type==='defendant')){
+    redrawRole('defendant', item.defendantMood);
+  }
   if(item.sfx) playCrowdReaction(item.sfx);
 
   clearInterval(typingTimer);
@@ -4987,6 +5006,15 @@ function showDialogue(item, cb){
       cb && cb();
     }
   };
+}
+
+/* 피고인은 대사가 없는 순간에도 검사/변호인의 발언에 조용히 반응함 (가끔 울거나 화냄) */
+function pickDefendantReaction(){
+  const roll = Math.random();
+  if(roll < 0.06) return 'crying';
+  if(roll < 0.12) return 'angry';
+  if(roll < 0.24) return 'distressed';
+  return 'worried';
 }
 
 /* ================= 위증 캐묻기(교차신문) 선택지 ================= */
@@ -5184,8 +5212,14 @@ function buildDialogueQueue(c){
   c.rounds.forEach((r,i)=>{
     const rr = cround(c,i);
     const escalate = i >= Math.ceil(c.rounds.length/2);
-    q.push({type:'prosecutor', name:PROS, text:rr.p, who:'pros', mood: escalate?'angry':'neutral', bgmMood: escalate?'tense':null});
-    q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood: escalate?'worried':'neutral', shift:r.momentum, bgmMood: escalate?'tense':null});
+    // 가끔 검사/변호인이 격앙되어 화를 냄 (후반부 라운드일수록 확률 높음)
+    const prosAngry = escalate ? Math.random()<0.55 : Math.random()<0.15;
+    const defAngry = escalate ? Math.random()<0.35 : Math.random()<0.12;
+    // 피고인은 대사가 없어도 검사/변호인의 발언에 조용히 반응함 (가끔 화내거나 욺)
+    const defendantMood1 = pickDefendantReaction();
+    const defendantMood2 = pickDefendantReaction();
+    q.push({type:'prosecutor', name:PROS, text:rr.p, who:'pros', mood: prosAngry?'angry':'neutral', bgmMood: prosAngry?'tense':null, defendantMood: defendantMood1});
+    q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood: defAngry?'angry':(escalate?'worried':'neutral'), shift:r.momentum, bgmMood: defendantMood2==='crying'?'somber':(defAngry?'tense':null), defendantMood: defendantMood2});
   });
   if(c.evidence && c.evidence.length && c.rounds && c.rounds.length>=2){
     q.push(buildCrossExamChoice(c.rounds[c.rounds.length-1].momentum));

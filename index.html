@@ -472,6 +472,46 @@
     #rotateGuard{ display:flex; }
     #stage{ display:none; }
   }
+
+  /* ================= 와이드 화면(PC/전체화면) 전용 레이아웃 =================
+     휴대폰 세로 화면에는 전혀 영향 없음 (min-width/min-height 둘 다 큰 화면에서만 적용).
+     좌우 여백을 살려 변호인-피고인-검사를 화면 전체 폭에 걸쳐 배치하고,
+     글자와 인물 스프라이트를 확대함. */
+  @media (min-width: 900px) and (min-height: 600px){
+    #stage{
+      width:94vw;
+      max-width:1600px;
+      max-height:min(960px, 94vh);
+    }
+    #hud{ font-size:13px; padding:10px 18px; }
+    #muteBtn,#evidenceBtn,#settingsBtn,#summaryBtn,#homeBtn{ font-size:12px; padding:5px 10px; }
+    .stand-label{ font-size:13px; padding:4px 12px; }
+    #dockStand{ width:170px; }
+    .stand{ width:130px; }
+    .sprite-holder canvas{ transform:scale(1.7); transform-origin:bottom center; }
+    #dialogueBox{
+      width:100%; max-width:680px; margin:0 auto; align-self:center;
+      padding:18px 22px 22px;
+    }
+    #dSpeaker{ font-size:14px; padding:3px 10px; }
+    #dText{ font-size:19px; line-height:1.65; min-height:64px; }
+    #dProgress{ font-size:12px; }
+    #dNext{ font-size:12px; }
+    .overlay h1{ font-size:28px; }
+    .overlay h2{ font-size:18px; }
+    .overlay p{ font-size:16px; max-width:480px; }
+    .lawtext{ font-size:16px; max-width:480px; }
+    .btn{ font-size:16px; padding:13px 22px; max-width:420px; }
+    .btn.small{ font-size:13px; }
+    .btn.tight{ font-size:15px; padding:11px 22px; }
+    .evidenceCard{ max-width:480px; }
+    .ev-thumb{ width:64px; height:64px; font-size:26px; }
+    .ev-thumb.doc .ev-icon{ font-size:20px; }
+    .choiceBtn{ font-size:14px; padding:11px 16px; }
+    #verdictPanel .sub{ font-size:13px; }
+    .vbtn{ font-size:15px; padding:16px 8px; }
+    .credit{ font-size:18px; }
+  }
 </style>
 <div id="rotateGuard">
   <div class="rotate-icon">📱</div>
@@ -576,10 +616,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.0.3.0
+   미니법정(Mini Court)  ver 1.0.4.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.0.3.0';
+const GAME_VERSION = '1.0.4.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1248,24 +1288,23 @@ const ROBE_ROWS = {
 function applyMood(colorGrid, mood){
   if(!mood || mood==='neutral') return;
   if(mood==='angry'){
-    colorGrid[2][5] = '#2a1010';
-    colorGrid[2][7] = '#2a1010';
-    colorGrid[4][6] = '#7a2230';
-    colorGrid[4][7] = '#7a2230';
+    colorGrid[2][4] = '#2a1010'; colorGrid[2][5] = '#2a1010';
+    colorGrid[2][7] = '#2a1010'; colorGrid[2][8] = '#2a1010';
+    colorGrid[4][5] = '#7a2230'; colorGrid[4][6] = '#7a2230'; colorGrid[4][7] = '#7a2230';
   } else if(mood==='worried'){
     colorGrid[2][2] = '#8fc7e8';
+    colorGrid[4][5] = '#8a6d4a'; colorGrid[4][7] = '#8a6d4a';
   } else if(mood==='relieved'){
-    colorGrid[4][7] = '#c9824a';
+    colorGrid[4][5] = '#c9824a'; colorGrid[4][6] = '#c9824a'; colorGrid[4][7] = '#c9824a';
+    colorGrid[3][4] = '#e8a878'; colorGrid[3][8] = '#e8a878';
   } else if(mood==='distressed'){
-    colorGrid[4][6] = '#2a1a12';
-    colorGrid[4][7] = '#2a1a12';
-    colorGrid[2][5] = '#2a1010';
-    colorGrid[2][7] = '#2a1010';
+    colorGrid[2][4] = '#2a1a12'; colorGrid[2][5] = '#2a1a12';
+    colorGrid[2][7] = '#2a1a12'; colorGrid[2][8] = '#2a1a12';
+    colorGrid[4][5] = '#2a1a12'; colorGrid[4][6] = '#2a1a12'; colorGrid[4][7] = '#2a1a12';
   } else if(mood==='flustered'){
     colorGrid[2][2] = '#8fc7e8';
-    colorGrid[3][10] = '#8fc7e8';
-    colorGrid[4][6] = '#a83c4a';
-    colorGrid[4][7] = '#a83c4a';
+    colorGrid[2][10] = '#8fc7e8'; colorGrid[3][11] = '#8fc7e8';
+    colorGrid[4][5] = '#a83c4a'; colorGrid[4][6] = '#a83c4a'; colorGrid[4][7] = '#a83c4a';
   }
 }
 
@@ -1381,16 +1420,17 @@ const ROLE_OPTS = {
 
 /* ================= 매 재판마다 바뀌는 외모 ================= */
 const APPEARANCE_POOLS = {
-  hair:['#4a4038','#241a14','#3a2c1c','#6b4526','#1c1610','#5c4a30','#2e2318','#7a5a3a','#463022','#8a7050','#1a1a1a','#9a8060'],
-  skin:['#dcb28c','#e2ba90','#c99a6e','#f0c8a0','#b8875e','#e8c39c','#d4a878','#f2d0aa'],
-  outfitDefendant:['#b8925a','#8a6d4a','#6e5838','#a47a48','#c9a26a','#9a8262','#7a6248'],
-  outfitPros:['#171310','#241a16','#1c140f','#2a1f18','#14100c'],
-  outfitDef:['#1e3350','#3a2c50','#2a4530','#4a2530','#25405a','#302838'],
-  accent:['#3a3f55','#5c1a34','#c9a24b','#4a2f6e','#2f5c4a','#7a2230','#3f5c7a'],
-  collar:['#d8c39a','#f2ede0','#e8dcc0','#ece1c4']
+  hair:['#4a4038','#241a14','#3a2c1c','#6b4526','#1c1610','#5c4a30','#2e2318','#7a5a3a','#463022','#8a7050','#1a1a1a','#9a8060','#c9a24b','#6b2f2f','#403050','#d8d0c0'],
+  skin:['#dcb28c','#e2ba90','#c99a6e','#f0c8a0','#b8875e','#e8c39c','#d4a878','#f2d0aa','#a67550','#8a5a3c','#f5ddb8'],
+  outfitDefendant:['#b8925a','#8a6d4a','#6e5838','#a47a48','#c9a26a','#9a8262','#7a6248','#4a5a4a','#5a4a5a','#3a4a5a'],
+  outfitPros:['#171310','#241a16','#1c140f','#2a1f18','#14100c','#241028','#1a2028'],
+  outfitDef:['#1e3350','#3a2c50','#2a4530','#4a2530','#25405a','#302838','#403a20','#502a2a'],
+  accent:['#3a3f55','#5c1a34','#c9a24b','#4a2f6e','#2f5c4a','#7a2230','#3f5c7a','#8a6d33','#2a2a2a'],
+  collar:['#d8c39a','#f2ede0','#e8dcc0','#ece1c4','#dcd4c0']
 };
 function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomizeAppearance(){
+  const defRobe = Math.random()<0.5;
   state.rolePalettes = {
     defendant:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
@@ -1400,18 +1440,18 @@ function randomizeAppearance(){
     pros:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
       outfit:pickFrom(APPEARANCE_POOLS.outfitPros), accent:pickFrom(APPEARANCE_POOLS.accent),
-      collar:'#f2ede0', accent2:'#c9a24b'
+      collar:pickFrom(APPEARANCE_POOLS.collar), accent2:pickFrom(APPEARANCE_POOLS.accent)
     },
     def:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
       outfit:pickFrom(APPEARANCE_POOLS.outfitDef), accent:pickFrom(APPEARANCE_POOLS.accent),
-      collar:'#f2ede0'
+      collar:pickFrom(APPEARANCE_POOLS.collar)
     }
   };
   state.roleOpts = {
-    defendant:{cuffs:true, messyHair: Math.random()<0.5, convictNo: 100+Math.floor(Math.random()*900)},
-    pros:{badge:true, robe:true, wideRobe:true},
-    def:{glasses: Math.random()<0.5}
+    defendant:{cuffs:true, messyHair: Math.random()<0.5, glasses: Math.random()<0.3, convictNo: 100+Math.floor(Math.random()*900)},
+    pros:{badge:true, robe:true, wideRobe: Math.random()<0.7},
+    def:{glasses: Math.random()<0.5, robe: defRobe, wideRobe: defRobe}
   };
 }
 
@@ -5940,7 +5980,7 @@ function generateShareCard(){
   ctx.fillText(tr(`처리 사건: ${activeCaseList.length}건`, `Cases handled: ${activeCaseList.length}`), 240, 240);
   ctx.fillText(`${tr('시민의심','Public Suspicion')}: ${state.suspicion}/5`, 240, 275);
   ctx.font='11px monospace'; ctx.fillStyle='#8a6d33';
-  ctx.fillText(tr('ver 1.0.0.0 · 제작: 최한민','ver 1.0.0.0 · Created by Choi Hanmin'), 240, 600);
+  ctx.fillText(tr(`ver ${GAME_VERSION} · 제작: 최한민`,`ver ${GAME_VERSION} · Created by Choi Hanmin`), 240, 600);
   const url = canvas.toDataURL('image/png');
   const ov = el('overlay');
   ov.innerHTML = `<h1>${tr('결과 카드','Result Card')}</h1>
@@ -5950,7 +5990,7 @@ function generateShareCard(){
 }
 
 function downloadJudgmentDocument(){
-  let text = tr('=== 미니법정 판결문 모음 (ver 1.0.0.0) ===\n\n','=== Mini Court - Collected Rulings (ver 1.0.0.0) ===\n\n');
+  let text = tr(`=== 미니법정 판결문 모음 (ver ${GAME_VERSION}) ===\n\n`,`=== Mini Court - Collected Rulings (ver ${GAME_VERSION}) ===\n\n`);
   state.history.forEach((h,i)=>{
     const c = CASES.find(cc=>cc.id===h.caseId);
     text += tr(`사건번호: 2026고합${1000+i}\n`, `Case No.: 2026-Criminal-${1000+i}\n`);

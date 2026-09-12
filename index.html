@@ -242,18 +242,20 @@
     60%{transform:translate(-50%,-50%) scale(1.15) rotate(4deg);opacity:1;}
     100%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1;}
   }
-  .objection-btn{
+  /* 증거 제출 순간에 잠깐 뜨는 연출용 배너(클릭 불가, 자동으로 사라짐) —
+     실제 채택/기각 결정은 재판장인 플레이어가 뒤이어 나오는 화면에서 내림 */
+  .objection-banner{
     position:absolute;left:50%;top:42%;
     animation:objectionIn 0.25s ease-out, objectionPulse 0.7s ease-in-out 0.25s infinite;
     z-index:9;
+    pointer-events:none;
     background:linear-gradient(180deg,#e8434f,#a3141f);
     color:#fff;font-family:inherit;font-weight:bold;letter-spacing:1px;
     border:3px solid #ffe14d;border-radius:14px;
-    padding:14px 22px;font-size:14px;cursor:pointer;
+    padding:14px 22px;font-size:14px;
     box-shadow:0 6px 18px rgba(0,0,0,0.55), 0 0 0 4px rgba(232,67,79,0.25);
     text-shadow:1px 1px 0 rgba(0,0,0,0.4);
   }
-  .objection-btn:active{filter:brightness(0.9);}
   @keyframes screenShake{
     0%,100%{transform:translateX(0);}
     20%{transform:translateX(-6px);}
@@ -351,7 +353,7 @@
   #dSpeaker.narrator{color:var(--brass);border-color:var(--brass);}
   #dSpeaker.defendant{color:#e8d2a0;border-color:var(--brass-dim);}
   #dSpeaker.judge{color:var(--parchment);border-color:var(--parchment-dim);}
-  #dSpeaker.objection{color:#ff8a8a;border-color:#e8434f;}
+  #dSpeaker.evidence_submit{color:#ff8a8a;border-color:#e8434f;}
   #dText{font-size:16px;line-height:1.6;min-height:64px;padding-bottom:20px;}
   #dNext{
     position:absolute; right:14px; bottom:10px;
@@ -640,7 +642,7 @@
     .ev-detail-handwritten{ font-size:19px!important; }
     .ev-detail-handwritten .hw-source{ font-size:13px!important; }
     .choiceBtn{ font-size:17px!important; padding:13px 18px; }
-    .objection-btn{ font-size:20px!important; padding:20px 32px; border-width:4px; }
+    .objection-banner{ font-size:20px!important; padding:20px 32px; border-width:4px; }
     #verdictPanel{ padding:26px 24px; }
     #verdictPanel h2{ font-size:20px!important; }
     #verdictPanel .sub{ font-size:16px!important; }
@@ -763,10 +765,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.7.0.0
+   미니법정(Mini Court)  ver 1.8.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.7.0.0';
+const GAME_VERSION = '1.8.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -5412,43 +5414,6 @@ function showDialogue(item, cb){
   };
 }
 
-/* "이의 있습니다!" 타이밍 버튼: 제한 시간 안에 누르면 증거 제시 기회로 이어지고,
-   놓치면(시간 초과 또는 그냥 대사창을 눌러 넘김) 아무 일 없이 지나감. */
-let objectionTimeout = null;
-function showObjectionMoment(item, cb){
-  let resolved = false;
-  showDialogue(item, ()=>{
-    if(resolved) return;
-    resolved = true;
-    clearObjectionButton();
-    cb(false);
-  });
-  spawnObjectionButton(()=>{
-    if(resolved) return;
-    resolved = true;
-    clearObjectionButton();
-    el('dialogueBox').onclick = null; // 이후 대사창 탭이 중복으로 콜백을 부르지 않도록 함
-    playCrowdReaction('gasp');
-    cb(true);
-  });
-}
-function spawnObjectionButton(onClick){
-  clearObjectionButton();
-  const btn = document.createElement('button');
-  btn.id = 'objectionBtn';
-  btn.className = 'objection-btn';
-  btn.textContent = '🚨 ' + tr('이의 있습니다!','Objection!');
-  btn.onclick = (e)=>{ e.stopPropagation(); onClick(); };
-  const scene = el('scene');
-  if(scene) scene.appendChild(btn);
-  objectionTimeout = setTimeout(()=>{ clearObjectionButton(); }, 4500);
-}
-function clearObjectionButton(){
-  if(objectionTimeout){ clearTimeout(objectionTimeout); objectionTimeout = null; }
-  const btn = el('objectionBtn');
-  if(btn) btn.remove();
-}
-
 /* 피고인은 대사가 없는 순간에도 검사/변호인의 발언에 조용히 반응함 (가끔 울거나 화냄) */
 function pickDefendantReaction(){
   const roll = Math.random();
@@ -5458,72 +5423,75 @@ function pickDefendantReaction(){
   return 'worried';
 }
 
-/* ================= 위증 캐묻기(교차신문) 선택지 ================= */
-const STAMMER_LINES = [
-  {who:'defendant', ko:'그, 그건... 저는 그러니까... 저기, 그게...', en:"I- I mean... that is... well, um..."},
-  {who:'defendant', ko:'아, 아니 그게 아니라... 잠깐만요, 다시 말씀드리면...', en:"N-no, that's not it... wait, let me put it differently..."},
-  {who:'def', ko:'재판장님, 저, 잠시... 의뢰인과 상의를... 아, 아닙니다. 계속하겠습니다.', en:"Your honor, I- just a moment... I need to confer with my client... n-never mind. I'll continue."},
-  {who:'defendant', ko:'그, 그러니까 제 말은... (침묵) ...죄, 죄송합니다, 다시 말씀드리겠습니다.', en:"W-what I mean is... (silence) ...s-sorry, let me say that again."},
-  {who:'def', ko:'흠, 흠! 그, 그 부분은... 피고인과 다시 한번 확인해보겠습니다.', en:"Ahem- ahem! Th-that part, I'll... I'll need to check with my client again."}
-];
-/* ================= "이의 있습니다!" 타이밍 + 증거 제시 ================= */
-/* 반대신문 클라이맥스: 변호인 측 답변에서 미심쩍은 부분이 나오는 순간,
-   제한 시간 안에 "이의 있습니다!" 버튼을 눌러야만 증거를 제시할 기회가
-   생긴다. 놓치면 그냥 다음으로 넘어감(기존의 '그냥 넘어간다'와 동일). */
-function buildObjectionMoment(baseShift){
+/* ================= 증거 제출 & 채택 여부 결정 =================
+   증거는 처음부터 다 공개되지 않는다. 검사 또는 변호인이 공방 도중
+   "이의 있습니다!"를 외치며 새 증거를 제출하면, 재판장(플레이어)이 그
+   증거를 자세히 읽어본 뒤 채택할지 기각할지 결정한다. 채택한 증거만
+   "증거" 버튼 목록에 쌓이고, 기각한 증거는 다시 볼 수 없다. */
+function buildEvidenceSubmissionItem(c, evIdx, submitterWho){
+  const ev = (cevidence(c)||[])[evIdx];
+  const label = submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel');
   return {
-    type:'objection',
-    name: t('defenseLabel'),
-    who:'def',
-    mood:'worried',
+    type:'evidence_submit',
+    evIdx, submitterWho,
+    name: label,
+    who: submitterWho,
+    mood:'neutral',
+    sfx:'gasp',
     bgmMood:'tense',
-    baseShift: baseShift||0,
     text: tr(
-      '...방금 변호인 측 답변, 어딘가 석연치 않습니다.',
-      "...Something about the defense's last answer doesn't sit right."
+      `이의 있습니다! 『${ev ? ev.name : ''}』을(를) 증거로 제출합니다.`,
+      `Objection! I submit "${ev ? ev.name : ''}" as evidence.`
     )
   };
 }
-/* 이의 제기에 성공하면 뜨는, 어떤 증거로 반박할지 고르는 선택지
-   (사건마다 등록된 증거물을 그대로 선택지로 사용 — 추가 데이터 불필요) */
-function buildEvidencePickChoice(c, baseShift){
-  const ev = cevidence(c) || [];
-  const options = ev.map((e,i)=>({label: e.icon+' '+e.name, key:'ev'+i}));
-  options.push({label:tr('증거를 제시하지 않는다','Present no evidence'), key:'none'});
-  return {
-    type:'choice',
-    choiceType:'evidence_pick',
-    bgmMood:'tense',
-    baseShift: baseShift||0,
-    prompt: tr('이의 있습니다! 어떤 증거로 반박하시겠습니까?','Objection! Which evidence will you use to counter?'),
-    options
-  };
+/* 채택 여부 결정 화면: 증거 상세 내용을 실제로 펼쳐 보여준 뒤 채택/기각 버튼을 둠 */
+let _pendingEvidenceAdmitCb = null;
+function showEvidenceSubmissionOverlay(item, cb){
+  const c = state.currentCase;
+  const ev = (cevidence(c)||[])[item.evIdx];
+  if(!ev){ cb(false); return; }
+  const ov = el('overlay');
+  el('dialogueBox').style.display = 'none';
+  ov.style.display = 'flex';
+  const submitterLabel = item.submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel');
+  const submitterPhrase = item.submitterWho==='pros' ? submitterLabel+'가' : submitterLabel+'이';
+  ov.innerHTML = `
+    <h1>⚖️ ${tr('이의 있습니다!','Objection!')}</h1>
+    <p style="color:var(--brass-dim);">${tr(`${submitterPhrase} 새로운 증거를 제출했습니다. 채택 여부를 결정하기 전에 내용을 확인하십시오.`, `${submitterLabel} has submitted new evidence. Review it before deciding whether to admit it.`)}</p>
+    <h2>${ev.icon} ${ev.name}</h2>
+    ${ev.detail ? evidenceDetailHtml(ev.detail) : `<p>${ev.desc}</p>`}
+    <p style="font-size:12px;">${tr('이 증거를 채택하시겠습니까?','Will you admit this evidence?')}</p>
+    <button class="btn" onclick="resolveEvidenceAdmit(true)">✅ ${tr('채택한다','Admit')}</button>
+    <button class="btn secondary" onclick="resolveEvidenceAdmit(false)">❌ ${tr('기각한다','Reject')}</button>`;
+  _pendingEvidenceAdmitCb = cb;
 }
-function buildEvidencePresentedFollowUp(choiceKey, baseShift){
+function resolveEvidenceAdmit(admitted){
+  el('overlay').style.display = 'none';
+  const cb = _pendingEvidenceAdmitCb;
+  _pendingEvidenceAdmitCb = null;
+  cb && cb(admitted);
+}
+function buildEvidenceAdmitAftermath(admitted){
   const NM = t('narratorLabel');
-  if(choiceKey === 'none'){
-    return [{type:'narrator', name:NM, text:tr('결국 결정적인 증거를 내놓지 못한 채, 반박의 기회를 흘려보냈습니다.','In the end, no decisive evidence was offered, and the chance to rebut slipped away.'), shift:(baseShift||0)>=0?-2:2}];
+  if(admitted){
+    return [{type:'narrator', name:NM, text:tr('재판장이 증거를 채택했습니다. 이제 "증거" 버튼에서 확인할 수 있습니다.','The judge admits the evidence. It can now be reviewed via the Evidence button.')}];
   }
-  const idx = parseInt(String(choiceKey).replace('ev',''), 10);
-  const ev = (cevidence(state.currentCase)||[])[idx];
-  const evName = ev ? ev.name : tr('증거','the evidence');
-  const impact = [{type:'narrator', name:NM, text:tr(`『${evName}』을(를) 근거로 몰아붙이자, 상대측 진술이 급격히 흔들리기 시작합니다!`, `Pressing the point with "${evName}" as evidence, the opposing side's story suddenly starts to fall apart!`), sfx:'gasp', shift:(baseShift||0)>=0?6:-6}];
-  return impact.concat(buildStammerFollowUp(baseShift));
+  return [{type:'narrator', name:NM, text:tr('재판장이 증거 채택을 기각했습니다.',"The judge rejects the evidence.")}];
 }
-function buildStammerFollowUp(baseShift){
-  const pick = STAMMER_LINES[Math.floor(Math.random()*STAMMER_LINES.length)];
-  const DFT = t('defendantLabel'), DEF = t('defenseLabel');
-  const isDefendant = pick.who==='defendant';
-  return [{
-    type: isDefendant ? 'defendant' : 'defense',
-    name: isDefendant ? DFT : DEF,
-    text: tr(pick.ko, pick.en),
-    who: pick.who,
-    mood:'flustered',
-    sfx:'gasp',
-    shift: (baseShift||0) >= 0 ? 4 : -4
-  }];
+function spawnObjectionBanner(){
+  const scene = el('scene');
+  if(!scene) return;
+  const old = document.getElementById('objectionBanner');
+  if(old) old.remove();
+  const div = document.createElement('div');
+  div.id = 'objectionBanner';
+  div.className = 'objection-banner';
+  div.textContent = '⚖️ ' + tr('이의 있습니다!','Objection!');
+  scene.appendChild(div);
+  setTimeout(()=>{ if(div.parentNode) div.remove(); }, 1300);
 }
+
 /* ================= 피고인 법정 난동 이벤트 ================= */
 const OUTBURST_LINES = [
   {ko:'그만! 다 거짓말이야! 나는 죄가 없다고!!', en:"Stop! It's all lies! I'm not guilty!!"},
@@ -5728,6 +5696,7 @@ function nextCase(){
   state._appealUsed = false;
   state._contemptPunish = false;
   state._caseStartTime = Date.now();
+  c._acceptedEvidenceIdx = []; // 증거는 채택되기 전까지 목록에 없음
   el('caseLabel').textContent = cf(c,'title');
   el('verdictPanel').style.display='none';
   state.opinion = 50;
@@ -5737,7 +5706,7 @@ function nextCase(){
   redrawRole('pros','neutral');
   redrawRole('def','neutral');
   playEnterAnimation();
-  el('evidenceBtn').style.display = c.evidence ? 'inline-block' : 'none';
+  el('evidenceBtn').style.display = 'none'; // 재판 시작 시엔 채택된 증거가 없으므로 숨김
   el('summaryBtn').style.display = 'inline-block';
   stopTitleTheme();
   setSceneBGM('calm', c.tag);
@@ -5760,6 +5729,7 @@ function buildDialogueQueue(c){
   q.push({type:'narrator', name:NM, text:cf(c,'intro'), who:'defendant'});
   q.push({type:'prosecutor', name:PROS, text:withJudgeOpening(cf(c,'prosOpen')), who:'pros', mood:'neutral'});
   q.push({type:'defense', name:DEF, text:withJudgeOpening(cf(c,'defOpen')), who:'def', mood:'worried'});
+  const roundEndPositions = [];
   c.rounds.forEach((r,i)=>{
     const rr = cround(c,i);
     const escalate = i >= Math.ceil(c.rounds.length/2);
@@ -5771,9 +5741,21 @@ function buildDialogueQueue(c){
     const defendantMood2 = pickDefendantReaction();
     q.push({type:'prosecutor', name:PROS, text:rr.p, who:'pros', mood: prosAngry?'angry':'neutral', bgmMood: prosAngry?'tense':null, defendantMood: defendantMood1});
     q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood: defAngry?'angry':(escalate?'worried':'neutral'), shift:r.momentum, bgmMood: defendantMood2==='crying'?'somber':(defAngry?'tense':null), defendantMood: defendantMood2});
+    roundEndPositions.push(q.length);
   });
-  if(c.evidence && c.evidence.length && c.rounds && c.rounds.length>=2){
-    q.push(buildObjectionMoment(c.rounds[c.rounds.length-1].momentum));
+  /* 증거는 검사/변호인이 공방 중간중간 "이의 있습니다!"를 외치며 하나씩
+     제출하고, 재판장(플레이어)이 그 자리에서 채택 여부를 결정한다.
+     (유죄 사건은 검사 측이, 무고 사건은 변호인 측이 제출하는 것으로 가정) */
+  if(c.evidence && c.evidence.length){
+    const submitterWho = c.guilty ? 'pros' : 'def';
+    const n = c.evidence.length;
+    const submissions = [];
+    for(let i=0;i<n;i++){
+      const targetRoundIdx = Math.min(c.rounds.length-1, Math.floor(i * c.rounds.length / n));
+      submissions.push({pos: roundEndPositions[targetRoundIdx], item: buildEvidenceSubmissionItem(c, i, submitterWho)});
+    }
+    // 뒤쪽 위치부터 삽입해야 앞쪽에 기록해 둔 위치가 밀리지 않음
+    submissions.sort((a,b)=>b.pos-a.pos).forEach(s=>{ q.splice(s.pos, 0, s.item); });
   }
   q.push({type:'prosecutor', name:PROS+tr(' (구형)',' (Sentencing Request)'), text:withJudgeClosing(cf(c,'prosFinal'), tr('엄중한 처벌을 부탁드립니다','I ask for a stern punishment')), who:'pros', mood:'angry', bgmMood:'tense'});
   q.push({type:'defense', name:DEF+tr(' (최후 변론)',' (Closing Argument)'), text:withJudgeClosing(cf(c,'defFinal'), tr('부디 선처를 부탁드립니다','I ask for your leniency')), who:'def', mood:'worried', bgmMood:'tense'});
@@ -5821,13 +5803,21 @@ function playQueue(){
   if(item.bgmMood){
     setSceneBGM(item.bgmMood, state.currentCase && state.currentCase.tag);
   }
-  if(item.type === 'objection'){
-    showObjectionMoment(item, (didObject)=>{
-      if(didObject){
-        state.dlgQueue.splice(state.dlgPos+1, 0, buildEvidencePickChoice(state.currentCase, item.baseShift));
-      }
-      state.dlgPos++;
-      playQueue();
+  if(item.type === 'evidence_submit'){
+    spawnObjectionBanner();
+    showDialogue(item, ()=>{
+      showEvidenceSubmissionOverlay(item, (admitted)=>{
+        if(admitted){
+          const c = state.currentCase;
+          if(!c._acceptedEvidenceIdx) c._acceptedEvidenceIdx = [];
+          c._acceptedEvidenceIdx.push(item.evIdx);
+          el('evidenceBtn').style.display = 'inline-block';
+        }
+        const extra = buildEvidenceAdmitAftermath(admitted);
+        state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
+        state.dlgPos++;
+        playQueue();
+      });
     });
     return;
   }
@@ -5841,8 +5831,6 @@ function playQueue(){
         extra = buildWitnessAftermath(choiceKey);
       } else if(item.choiceType === 'misconduct'){
         extra = buildMisconductAftermath(choiceKey);
-      } else if(item.choiceType === 'evidence_pick'){
-        extra = buildEvidencePresentedFollowUp(choiceKey, item.baseShift);
       }
       if(extra) state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
       state.dlgPos++;
@@ -6331,7 +6319,12 @@ function showEvidence(){
   const ov = el('overlay');
   ov.style.display='flex';
   const ev = cevidence(c);
-  const items = ev.map((e,i)=>`
+  // c._acceptedEvidenceIdx가 없으면(항소심 등 채택 메커닉이 없는 흐름) 전체를 보여주고,
+  // 있으면(정식 1심 재판) 재판장이 채택한 증거만 보여줌
+  const indices = c._acceptedEvidenceIdx ? c._acceptedEvidenceIdx : ev.map((_,i)=>i);
+  const items = indices.map(i=>{
+    const e = ev[i];
+    return `
     <div class="evidenceCard flip-in ${e.detail?'clickable':''}" style="animation-delay:${i*0.12}s;" ${e.detail?`onclick="openEvidenceDetail(${i})"`:''}>
       ${evidenceThumbHtml(e.icon)}
       <div class="ev-body">
@@ -6340,7 +6333,8 @@ function showEvidence(){
         ${e.detail?`<div class="ev-detail-hint">🔍 ${tr('탭하여 자세히 보기','Tap to view in detail')}</div>`:''}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('') || `<p>${tr('아직 채택된 증거가 없습니다.','No evidence has been admitted yet.')}</p>`;
   ov.innerHTML = `<h1>${tr('증거물','Evidence')}</h1>${items}<button class="btn" onclick="closeEvidence()">${t('close')}</button>`;
 }
 function closeEvidence(){
@@ -6832,7 +6826,8 @@ function quitGame(){
 
 function showTitle(){
   inTrial = false;
-  clearObjectionButton();
+  const stray = document.getElementById('objectionBanner');
+  if(stray) stray.remove();
   el('evidenceBtn').style.display='none';
   el('summaryBtn').style.display='none';
   document.querySelectorAll('.end-vignette,.confetti').forEach(e=>e.remove());

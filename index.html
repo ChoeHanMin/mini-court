@@ -53,7 +53,7 @@
     flex-direction:column;
     overflow:hidden;
   }
-  #stage.large-text #dText{font-size:16px;}
+  #stage.large-text #dText{font-size:17px;}
   #stage.large-text .overlay p{font-size:15px;}
   #stage.large-text .lawtext{font-size:15px;}
   #stage.large-text .np-headline{font-size:17px;}
@@ -313,7 +313,7 @@
   }
   #dSpeaker{
     display:inline-block;
-    font-size:11px; font-weight:bold; letter-spacing:1px;
+    font-size:12px; font-weight:bold; letter-spacing:1px;
     padding:2px 8px; margin-bottom:6px;
     border:1px solid var(--brass-dim);
   }
@@ -322,7 +322,7 @@
   #dSpeaker.narrator{color:var(--brass);border-color:var(--brass);}
   #dSpeaker.defendant{color:#e8d2a0;border-color:var(--brass-dim);}
   #dSpeaker.judge{color:var(--parchment);border-color:var(--parchment-dim);}
-  #dText{font-size:13.5px;line-height:1.55;min-height:56px;padding-bottom:20px;}
+  #dText{font-size:14.5px;line-height:1.58;min-height:58px;padding-bottom:20px;}
   #dNext{
     position:absolute; right:14px; bottom:10px;
     font-size:10px; color:var(--brass); letter-spacing:1px;
@@ -535,8 +535,8 @@
       width:100%; max-width:820px; margin:0 auto; align-self:center;
       padding:22px 26px 26px;
     }
-    #dSpeaker{ font-size:16px!important; padding:4px 12px; }
-    #dText{ font-size:23px!important; line-height:1.65!important; min-height:74px; padding-bottom:26px; }
+    #dSpeaker{ font-size:17px!important; padding:4px 12px; }
+    #dText{ font-size:25px!important; line-height:1.65!important; min-height:74px; padding-bottom:26px; }
     #dProgress{ font-size:14px!important; }
     #dNext{ font-size:14px!important; }
     .overlay{ padding:40px; }
@@ -677,10 +677,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.2.0.0
+   미니법정(Mini Court)  ver 1.3.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.2.0.0';
+const GAME_VERSION = '1.3.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -5083,6 +5083,13 @@ function showDialogue(item, cb){
     redrawRole('defendant', item.defendantMood);
   }
   if(item.sfx) playCrowdReaction(item.sfx);
+  if(item.shake){
+    const stageEl = el('stage');
+    stageEl.classList.remove('shake');
+    void stageEl.offsetWidth;
+    stageEl.classList.add('shake');
+    setTimeout(()=>stageEl.classList.remove('shake'), 550);
+  }
 
   clearInterval(typingTimer);
   typingFull = item.text;
@@ -5173,6 +5180,36 @@ function buildStammerFollowUp(baseShift){
     shift: (baseShift||0) >= 0 ? 4 : -4
   }];
 }
+/* ================= 피고인 법정 난동 이벤트 ================= */
+const OUTBURST_LINES = [
+  {ko:'그만! 다 거짓말이야! 나는 죄가 없다고!!', en:"Stop! It's all lies! I'm not guilty!!"},
+  {ko:'닥쳐요! 더 이상 듣기 싫어! 왜 다들 나만 몰아붙이는 거예요!', en:"Shut up! I don't want to hear any more of this! Why is everyone ganging up on me?!"},
+  {ko:'이건 말도 안 돼! 이 재판 자체가 잘못됐다고요!', en:"This is insane! This whole trial is rigged!"},
+  {ko:'아아악!! 그만 좀 하라고요!! 다들 나를 죽이려는 거잖아요!!', en:"AAAAH!! Just stop already!! You're all trying to destroy me!!"}
+];
+function buildOutburstEvent(){
+  const NM = t('narratorLabel'), DFT = t('defendantLabel');
+  const pick = OUTBURST_LINES[Math.floor(Math.random()*OUTBURST_LINES.length)];
+  return [
+    {type:'narrator', name:NM, text:tr('갑자기 피고인이 자리에서 벌떡 일어나며 소리를 지르고 난동을 피웁니다!','Suddenly, the defendant leaps to their feet, shouting and causing an uproar!'), who:'defendant', defendantMood:'angry', sfx:'gasp', shake:true, bgmMood:'tense'},
+    {type:'defendant', name:DFT, text:tr(pick.ko, pick.en), who:'defendant', mood:'angry', shake:true},
+    {type:'choice', choiceType:'outburst', bgmMood:'tense',
+      prompt: tr('피고인이 법정 질서를 어지럽혔습니다. 어떻게 대응하시겠습니까?','The defendant has disrupted order in the courtroom. How do you respond?'),
+      options:[
+        {label:'⚖️ '+tr('법정모욕으로 추가 형벌 부과','Impose an added penalty for contempt of court'), key:'punish'},
+        {label:'🗣️ '+tr('구두로 엄중 경고한다','Issue a stern verbal warning'), key:'warn'}
+      ]
+    }
+  ];
+}
+function buildOutburstAftermath(choiceKey){
+  const NM = t('narratorLabel');
+  if(choiceKey==='punish'){
+    return [{type:'narrator', name:NM, text:tr('법원 경위가 피고인을 제지하는 가운데, 재판장은 법정 모욕에 대해 추가 감치 처분을 명령합니다.','As bailiffs restrain the defendant, the judge orders additional custody for contempt of court.'), who:'defendant', defendantMood:'distressed', shift:2}];
+  }
+  return [{type:'narrator', name:NM, text:tr('재판장의 근엄한 경고에 피고인은 겨우 진정하고 다시 자리에 앉습니다.',"At the judge's stern warning, the defendant finally calms down and sits back down."), who:'defendant', defendantMood:'worried', shift:-1}];
+}
+
 function showChoice(item, cb){
   const box = el('dialogueBox');
   box.style.display='block';
@@ -5297,6 +5334,7 @@ function nextCase(){
   const c = activeCaseList[state.caseIdx];
   state.currentCase = c;
   state._appealUsed = false;
+  state._contemptPunish = false;
   state._caseStartTime = Date.now();
   el('caseLabel').textContent = cf(c,'title');
   el('verdictPanel').style.display='none';
@@ -5358,6 +5396,13 @@ function buildDialogueQueue(c){
     q.splice(insertPos, 0, {type:'narrator', name:NM, text:evText, who:null, sfx:ev.sfx});
   }
 
+  /* 피고인이 가끔 법정에서 소리지르며 난동을 피움 (사건당 최대 한 번) */
+  if(c.rounds.length>=2 && Math.random()<0.22){
+    const outburst = buildOutburstEvent();
+    const insertPos2 = Math.max(3, Math.min(q.length-2, 3+Math.floor(Math.random()*(q.length-5))));
+    q.splice(insertPos2, 0, ...outburst);
+  }
+
   state.dlgQueue = q;
 }
 
@@ -5379,7 +5424,11 @@ function playQueue(){
   }
   if(item.type === 'choice'){
     showChoice(item, (choiceKey)=>{
-      if(choiceKey==='press'){
+      if(item.choiceType === 'outburst'){
+        state._contemptPunish = (choiceKey==='punish');
+        const extra = buildOutburstAftermath(choiceKey);
+        state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
+      } else if(choiceKey==='press'){
         const extra = buildStammerFollowUp(item.baseShift);
         state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
       }
@@ -6050,6 +6099,10 @@ function showResultOverlay(type, years, outcome, extras){
     if(extras.suspend) extraNotes.push(tr('관련 자격이 일정 기간 정지되었습니다.','The related qualification was suspended for a set period.'));
     if(extras.revoke) extraNotes.push(tr('관련 자격을 완전히 상실했습니다.','The related qualification was permanently revoked.'));
     messages.push(`<p style="color:var(--brass-dim);">${extraNotes.join(' ')}</p>`);
+  }
+
+  if(state._contemptPunish){
+    messages.push(`<p style="color:var(--brass-dim);">${tr('법정 소란에 대해 추가 감치 처분을 명령했습니다.','You additionally ordered custody for the courtroom disturbance.')}</p>`);
   }
 
   if(!wasAppealFlag && (outcome.kind==='mild_lenient'||outcome.kind==='mild_harsh') && Math.random()<0.4){

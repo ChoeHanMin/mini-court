@@ -395,6 +395,20 @@
     min-height:0;
   }
   @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  @keyframes reactionSlideIn{
+    from{opacity:0;transform:translateY(6px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .reaction-feed{
+    width:100%;max-width:340px;margin:2px 0 10px;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .reaction-line{
+    font-size:10.5px;color:var(--parchment-dim);text-align:left;
+    background:rgba(0,0,0,0.25);border-left:2px solid var(--brass-dim);
+    padding:4px 8px;opacity:0;
+    animation:reactionSlideIn 0.35s ease forwards;
+  }
   .overlay h1{
     font-size:22px;color:var(--brass);letter-spacing:2px;margin:0 0 14px;
     text-shadow:2px 2px 0 #000;
@@ -625,6 +639,8 @@
     .credit{ font-size:22px!important; }
     .verline{ font-size:13px!important; }
     .evidenceCard{ max-width:600px; padding:14px; }
+    .reaction-feed{ max-width:520px; }
+    .reaction-line{ font-size:14px!important; padding:6px 12px; }
     .ev-thumb{ width:72px; height:72px; font-size:30px!important; }
     .ev-thumb.doc .ev-icon{ font-size:22px!important; }
     .ev-body b{ font-size:16px!important; }
@@ -765,10 +781,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.8.0.0
+   미니법정(Mini Court)  ver 1.9.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.8.0.0';
+const GAME_VERSION = '1.9.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1152,14 +1168,27 @@ const DIFFICULTY_MODS = {
   normal:{fairMinAdj:0, fairMaxAdj:0, outrageHighAdj:0, outrageLowAdj:0},
   hard:{fairMinAdj:0.7, fairMaxAdj:-0.7, outrageHighAdj:-2, outrageLowAdj:0.7}
 };
+/* 재판 중 채택하지 않고 넘어간 증거가 있으면(=핵심 정보를 다 보지 못한 채
+   판결에 임한 것), 극단적인 형량에 대한 허용 여지(outrage 문턱)이 좁아짐.
+   증거를 전부 채택했다면 기존과 동일한 관용 범위가 적용됨. */
+function evidenceCompletenessAdj(c){
+  if(!c || !c.evidence || !c.evidence.length) return {outrageHighAdj:0, outrageLowAdj:0};
+  const accepted = (c._acceptedEvidenceIdx || []).length;
+  const missingRatio = 1 - (accepted / c.evidence.length); // 0=전부 채택, 1=전부 기각
+  return {
+    outrageHighAdj: -missingRatio * 2,
+    outrageLowAdj: missingRatio * 1
+  };
+}
 function adjustedRange(c){
   if(c.fairMin==null) return c;
   const mod = DIFFICULTY_MODS[difficulty] || DIFFICULTY_MODS.normal;
+  const evAdj = evidenceCompletenessAdj(c);
   return {
     fairMin: c.fairMin + mod.fairMinAdj,
     fairMax: c.fairMax + mod.fairMaxAdj,
-    outrageHigh: c.outrageHigh!=null ? c.outrageHigh + mod.outrageHighAdj : null,
-    outrageLow: c.outrageLow!=null ? c.outrageLow + mod.outrageLowAdj : null
+    outrageHigh: c.outrageHigh!=null ? c.outrageHigh + mod.outrageHighAdj + evAdj.outrageHighAdj : null,
+    outrageLow: c.outrageLow!=null ? c.outrageLow + mod.outrageLowAdj + evAdj.outrageLowAdj : null
   };
 }
 
@@ -1801,6 +1830,46 @@ const APPEARANCE_POOLS = {
    상징하는 문양이 직조된 자주색 양단이 덧대어져 시각적으로 구별됨 */
 const PROS_OUTFIT_COLOR = '#171310';
 const PROS_ACCENT_COLOR = '#7a1f52';
+
+/* ================= 라이벌 변호사·검사 (가끔 등장하는 고정 캐릭터) =================
+   무작위 외모 대신, 정해진 이름과 고유 색상 팔레트를 가진 캐릭터가 낮은 확률로
+   등장한다. 만난 횟수가 쌓이면 대사에 그 사실이 반영되고, 관록 있는 상대일수록
+   더 날카롭게 몰아붙인다. */
+const RIVAL_ATTORNEYS = {
+  def: [
+    {id:'def_kang', ko:'강태민 변호사', en:'Attorney Kang Tae-min', hair:'#241a14', skin:'#dcb28c', outfit:'#1e3350', accent:'#c9a24b', collar:'#f2ede0'},
+    {id:'def_oh', ko:'오세영 변호사', en:'Attorney Oh Se-young', hair:'#6b4526', skin:'#e2ba90', outfit:'#4a2530', accent:'#3a3f55', collar:'#e8dcc0'},
+    {id:'def_baek', ko:'백지원 변호사', en:'Attorney Baek Ji-won', hair:'#1a1a1a', skin:'#c99a6e', outfit:'#2a4530', accent:'#7a2230', collar:'#d8c39a'}
+  ],
+  pros: [
+    {id:'pros_kim', ko:'김도윤 검사', en:'Prosecutor Kim Do-yoon', hair:'#3a2c1c', skin:'#d4a878', collar:'#f2ede0'},
+    {id:'pros_lee', ko:'이수현 검사', en:'Prosecutor Lee Su-hyun', hair:'#1c1610', skin:'#e8c39c', collar:'#ece1c4'},
+    {id:'pros_jung', ko:'정하람 검사', en:'Prosecutor Jung Ha-ram', hair:'#7a5a3a', skin:'#b8875e', collar:'#dcd4c0'}
+  ]
+};
+const RIVAL_APPEAR_CHANCE = 0.35;
+let rivalStats = {};
+async function loadRivalStats(){
+  try{
+    const res = await window.storage.get('rivalStats', false);
+    if(res && res.value) rivalStats = JSON.parse(res.value);
+  }catch(e){}
+  if(!rivalStats || typeof rivalStats !== 'object') rivalStats = {};
+}
+function saveRivalStats(){
+  try{ window.storage.set('rivalStats', JSON.stringify(rivalStats), false).catch(()=>{}); }catch(e){}
+}
+function rivalName(rival){
+  return rival ? tr(rival.ko, rival.en) : '';
+}
+/* 한글 이름/호칭 뒤에 붙는 주격 조사(이/가)를 마지막 글자의 받침 유무로 자동 선택
+   (라이벌 이름은 "변호사"처럼 일반 호칭 "변호인"과 받침이 다를 수 있으므로 필요) */
+function koreanSubjectParticle(str){
+  if(!str) return '가';
+  const code = str.charCodeAt(str.length-1);
+  if(code < 0xAC00 || code > 0xD7A3) return '가';
+  return (code - 0xAC00) % 28 !== 0 ? '이' : '가';
+}
 function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomBuildScale(){ return (0.88 + Math.random()*0.4).toFixed(2); }
 function randomizeAppearance(){
@@ -1827,6 +1896,33 @@ function randomizeAppearance(){
     pros:{badge:true, robe:true, wideRobe:true, scale:randomBuildScale()},
     def:{glasses: Math.random()<0.5, robe: defRobe, wideRobe: defRobe, scale:randomBuildScale()}
   };
+
+  /* 낮은 확률로 검사·변호인 자리에 고정 라이벌 캐릭터가 등장 (각 역할 독립 판정) */
+  state.currentRivals = {def:null, pros:null};
+  if(Math.random() < RIVAL_APPEAR_CHANCE){
+    const rival = pickFrom(RIVAL_ATTORNEYS.def);
+    state.currentRivals.def = rival;
+    state.rolePalettes.def.hair = rival.hair;
+    state.rolePalettes.def.skin = rival.skin;
+    state.rolePalettes.def.outfit = rival.outfit;
+    state.rolePalettes.def.accent = rival.accent;
+    state.rolePalettes.def.collar = rival.collar;
+    rivalStats[rival.id] = (rivalStats[rival.id]||0) + 1;
+  }
+  if(Math.random() < RIVAL_APPEAR_CHANCE){
+    const rival = pickFrom(RIVAL_ATTORNEYS.pros);
+    state.currentRivals.pros = rival;
+    state.rolePalettes.pros.hair = rival.hair;
+    state.rolePalettes.pros.skin = rival.skin;
+    state.rolePalettes.pros.collar = rival.collar;
+    /* 검사복 자체(검정+자주)는 항상 고정이므로 outfit/accent는 건드리지 않음 */
+    rivalStats[rival.id] = (rivalStats[rival.id]||0) + 1;
+  }
+  if(state.currentRivals.def || state.currentRivals.pros) saveRivalStats();
+}
+function rivalEncounterCount(rival){
+  if(!rival) return 0;
+  return rivalStats[rival.id] || 0;
 }
 
 function redrawRole(role, mood){
@@ -1893,6 +1989,50 @@ const SUSPICION_LINES_EN = [
   '"You let a criminal go free."',
   '"You did nothing to wipe away the victim\'s tears."'
 ];
+
+/* ================= 여론 반응 피드 (판결 직후, 시민들의 짧은 SNS풍 반응) ================= */
+const REACTION_FEED = {
+  fair: [
+    {ko:'"이번엔 제대로 된 판결이네요."', en:'"Finally, a ruling that makes sense."'},
+    {ko:'"균형 잡힌 판단이었다고 봅니다."', en:'"That felt like a genuinely balanced call."'},
+    {ko:'"신뢰가 가는 재판장님이네요."', en:'"This judge seems trustworthy."'},
+    {ko:'"법이 제 역할을 했네요."', en:'"The law did its job here."'},
+    {ko:'"딱 이 정도가 맞는 거 같아요."', en:'"This feels about right."'},
+    {ko:'"양쪽 다 납득할 만한 선고였어요."', en:'"A sentence both sides could live with."'}
+  ],
+  correct_acquittal: [
+    {ko:'"무고한 사람을 지켰네요, 다행입니다."', en:'"An innocent person was protected. Thank goodness."'},
+    {ko:'"증거를 제대로 본 재판이었어요."', en:'"This trial actually looked at the evidence."'},
+    {ko:'"저 사람이 아니었다니 다행이에요."', en:'"Relieved it wasn\'t them after all."'},
+    {ko:'"이런 재판장님이 더 많아야 해요."', en:'"We need more judges like this."'}
+  ],
+  mild_lenient: [
+    {ko:'"음... 조금 봐준 거 아닌가요?"', en:'"Hmm... wasn\'t that a bit soft?"'},
+    {ko:'"살짝 관대한 감이 있네요."', en:'"A touch lenient, if you ask me."'},
+    {ko:'"뭐, 이해 못할 정도는 아니에요."', en:'"Not unreasonable, I guess."'},
+    {ko:'"조금 더 무거워도 됐을 텐데."', en:'"Could\'ve been a bit heavier."'}
+  ],
+  mild_harsh: [
+    {ko:'"음... 조금 과한 거 아닌가요?"', en:'"Hmm... wasn\'t that a bit much?"'},
+    {ko:'"살짝 엄격한 감이 있네요."', en:'"A touch harsh, if you ask me."'},
+    {ko:'"뭐, 이해 못할 정도는 아니에요."', en:'"Not unreasonable, I guess."'},
+    {ko:'"조금 더 가벼워도 됐을 텐데."', en:'"Could\'ve gone a bit easier."'}
+  ],
+  suspicion: [
+    {ko:'"저게 정말 맞는 판결인가요?"', en:'"Is that really the right call?"'},
+    {ko:'"뭔가 찜찜한 결과네요."', en:'"Something about this doesn\'t sit right."'},
+    {ko:'"피해자는 어떻게 되는 건가요..."', en:'"What about the victim, though..."'},
+    {ko:'"재판장님, 다시 생각해보셔야 할 것 같은데요."', en:'"Your honor, you might want to reconsider."'}
+  ]
+};
+function reactionFeedHtml(kind){
+  const pool = REACTION_FEED[kind];
+  if(!pool || !pool.length) return '';
+  const shuffled = shuffleArr(pool.slice());
+  const picks = shuffled.slice(0, Math.min(3, shuffled.length));
+  const lines = picks.map((r,i)=>`<div class="reaction-line" style="animation-delay:${0.15+i*0.18}s;">💬 ${tr(r.ko, r.en)}</div>`).join('');
+  return `<div class="reaction-feed">${lines}</div>`;
+}
 
 const RANDOM_EVENTS = [
   {text:'(방청석에서 누군가 소리쳤습니다: "거짓말하지 마!" 법정 경위가 즉시 제지했습니다.)', sfx:'gasp'},
@@ -5430,7 +5570,8 @@ function pickDefendantReaction(){
    "증거" 버튼 목록에 쌓이고, 기각한 증거는 다시 볼 수 없다. */
 function buildEvidenceSubmissionItem(c, evIdx, submitterWho){
   const ev = (cevidence(c)||[])[evIdx];
-  const label = submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel');
+  const rival = submitterWho==='pros' ? (state.currentRivals && state.currentRivals.pros) : (state.currentRivals && state.currentRivals.def);
+  const label = rival ? rivalName(rival) : (submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel'));
   return {
     type:'evidence_submit',
     evIdx, submitterWho,
@@ -5454,8 +5595,9 @@ function showEvidenceSubmissionOverlay(item, cb){
   const ov = el('overlay');
   el('dialogueBox').style.display = 'none';
   ov.style.display = 'flex';
-  const submitterLabel = item.submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel');
-  const submitterPhrase = item.submitterWho==='pros' ? submitterLabel+'가' : submitterLabel+'이';
+  const submitterRival = item.submitterWho==='pros' ? (state.currentRivals && state.currentRivals.pros) : (state.currentRivals && state.currentRivals.def);
+  const submitterLabel = submitterRival ? rivalName(submitterRival) : (item.submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel'));
+  const submitterPhrase = submitterLabel + koreanSubjectParticle(submitterLabel);
   ov.innerHTML = `
     <h1>⚖️ ${tr('이의 있습니다!','Objection!')}</h1>
     <p style="color:var(--brass-dim);">${tr(`${submitterPhrase} 새로운 증거를 제출했습니다. 채택 여부를 결정하기 전에 내용을 확인하십시오.`, `${submitterLabel} has submitted new evidence. Review it before deciding whether to admit it.`)}</p>
@@ -5719,7 +5861,27 @@ function nextCase(){
 
 function buildDialogueQueue(c){
   const q = [];
-  const NM = t('narratorLabel'), PROS = t('prosecutorLabel'), DEF = t('defenseLabel'), DFT = t('defendantLabel');
+  const NM = t('narratorLabel'), DFT = t('defendantLabel');
+  const rivalPros = state.currentRivals && state.currentRivals.pros;
+  const rivalDef = state.currentRivals && state.currentRivals.def;
+  const PROS = rivalPros ? rivalName(rivalPros) : t('prosecutorLabel');
+  const DEF = rivalDef ? rivalName(rivalDef) : t('defenseLabel');
+  if(rivalPros || rivalDef){
+    const lines = [];
+    if(rivalPros){
+      const n = rivalEncounterCount(rivalPros);
+      const rpName = rivalName(rivalPros), rpP = koreanSubjectParticle(rpName);
+      if(n>=3) lines.push(tr(`검사석에는 이미 여러 차례 맞붙은 ${rpName}${rpP} 앉아 있습니다. 노련한 눈빛입니다.`, `${rpName} takes the prosecutor's seat again — a familiar, seasoned rival you've faced many times before.`));
+      else if(n===2) lines.push(tr(`검사석에 ${rpName}${rpP} 다시 나타났습니다.`, `${rpName} is back in the prosecutor's seat.`));
+    }
+    if(rivalDef){
+      const n = rivalEncounterCount(rivalDef);
+      const rdName = rivalName(rivalDef), rdP = koreanSubjectParticle(rdName);
+      if(n>=3) lines.push(tr(`변호인석에는 이미 여러 차례 맞붙은 ${rdName}${rdP} 앉아 있습니다. 노련한 눈빛입니다.`, `${rdName} takes the defense seat again — a familiar, seasoned rival you've faced many times before.`));
+      else if(n===2) lines.push(tr(`변호인석에 ${rdName}${rdP} 다시 나타났습니다.`, `${rdName} is back in the defense seat.`));
+    }
+    lines.forEach(text=>q.push({type:'narrator', name:NM, text, who:null}));
+  }
   if(c.callbackFrom){
     const found = state.history.find(h=>h.caseId===c.callbackFrom && h.lenient);
     if(found){
@@ -5734,8 +5896,11 @@ function buildDialogueQueue(c){
     const rr = cround(c,i);
     const escalate = i >= Math.ceil(c.rounds.length/2);
     // 가끔 검사/변호인이 격앙되어 화를 냄 (후반부 라운드일수록 확률 높음)
-    const prosAngry = escalate ? Math.random()<0.55 : Math.random()<0.15;
-    const defAngry = escalate ? Math.random()<0.35 : Math.random()<0.12;
+    // 여러 번 맞붙은 관록 있는 라이벌일수록 조금 더 날카롭게 몰아붙임
+    const prosVeteranBoost = rivalEncounterCount(rivalPros) >= 3 ? 0.12 : 0;
+    const defVeteranBoost = rivalEncounterCount(rivalDef) >= 3 ? 0.12 : 0;
+    const prosAngry = escalate ? Math.random()<0.55+prosVeteranBoost : Math.random()<0.15+prosVeteranBoost;
+    const defAngry = escalate ? Math.random()<0.35+defVeteranBoost : Math.random()<0.12+defVeteranBoost;
     // 피고인은 대사가 없어도 검사/변호인의 발언에 조용히 반응함 (가끔 화내거나 욺)
     const defendantMood1 = pickDefendantReaction();
     const defendantMood2 = pickDefendantReaction();
@@ -5871,11 +6036,17 @@ function showLawCard(){
       <p style="color:var(--brass-dim);">${law.note}</p>`;
   }
 
+  const acceptedN = (c._acceptedEvidenceIdx||[]).length;
+  const totalN = (c.evidence||[]).length;
+  const incompleteNote = (totalN>0 && acceptedN<totalN)
+    ? `<p style="color:var(--danger);font-size:10px;">⚠️ ${tr(`증거 ${totalN}건 중 ${acceptedN}건만 채택했습니다. 정보가 부족해 극단적인 형량에 대한 판단 여지가 좁아졌습니다.`, `You admitted only ${acceptedN} of ${totalN} pieces of evidence. With less information, your margin for an extreme sentence has narrowed.`)}</p>`
+    : '';
   ov.innerHTML = `
     <h1>${tr('관련 법률','Relevant Law')}</h1>
     ${lawHtml}
     ${c.precedent ? `<p style="font-size:11px;">📖 ${cf(c,'precedent')}</p>` : ''}
     <p style="font-size:10px;">${tr(LAW_FOOTNOTE, LAW_FOOTNOTE_EN)}</p>
+    ${incompleteNote}
     <button class="btn danger" onclick="${nextAction}">${btnLabel}</button>`;
 }
 
@@ -6023,6 +6194,7 @@ document.addEventListener('keydown', (e)=>{
 
 let pendingResolveType = null;
 let pendingResolveYears = null;
+let pendingResolveExtras = null;
 
 function proceedToExtras(type, years){
   pendingResolveType = type;
@@ -6036,7 +6208,7 @@ function proceedToExtras(type, years){
     opts.push({key:'revoke', label:tr(`자격상실 추가 — ${qual} 관련 자격을 완전히 상실`, `Add Loss of Qualification — permanently revoke ${qual}-related qualification`)});
   }
   if(!opts.length){
-    resolveVerdict(type, years, {});
+    proceedToReason(type, years, {});
     return;
   }
   el('yearsPanel').style.display='none';
@@ -6061,8 +6233,39 @@ el('extrasConfirm') && el('extrasConfirm').addEventListener('click', ()=>{
     if(cb.checked) extras[cb.dataset.extra] = true;
   });
   el('extrasPanel').style.display='none';
-  resolveVerdict(pendingResolveType, pendingResolveYears, extras);
+  proceedToReason(pendingResolveType, pendingResolveYears, extras);
 });
+
+/* ================= 판결 사유 선택 =================
+   형량/부수 처분을 다 정한 뒤, 마지막으로 이번 판결의 주된 근거를 하나
+   선택하게 함. 사건 수첩·기록에 남아 "나만의 판결 성향"을 돌아볼 수 있음. */
+const VERDICT_REASONS = [
+  {key:'severity', ko:'죄질과 피해 정도를 고려함', en:"Weighed the severity of the offense and the harm caused"},
+  {key:'remorse', ko:'피고인의 반성 및 재범 가능성을 고려함', en:"Considered the defendant's remorse and risk of reoffending"},
+  {key:'guideline', ko:'법정형과 양형 기준을 엄격히 따름', en:"Strictly followed the statutory range and sentencing guidelines"},
+  {key:'publicOpinion', ko:'사회적 파장과 여론을 고려함', en:"Took the social impact and public sentiment into account"},
+  {key:'evidence', ko:'증거와 정황을 종합적으로 판단함', en:"Weighed the evidence and circumstances as a whole"}
+];
+function proceedToReason(type, years, extras){
+  pendingResolveType = type;
+  pendingResolveYears = years;
+  pendingResolveExtras = extras || {};
+  el('verdictPanel').style.display = 'none';
+  const ov = el('overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML = `
+    <h1>${tr('판결 사유','Grounds for the Ruling')}</h1>
+    <p style="font-size:12px;color:var(--parchment-dim);">${tr('이번 판결의 주된 근거를 선택하세요. 사건 수첩에 기록됩니다.','Choose the main basis for this ruling. It will be recorded in your case log.')}</p>
+    ${VERDICT_REASONS.map(r=>`<button class="btn secondary" onclick="confirmVerdictReason('${r.key}')">${tr(r.ko, r.en)}</button>`).join('')}`;
+}
+function confirmVerdictReason(reasonKey){
+  el('overlay').style.display = 'none';
+  resolveVerdict(pendingResolveType, pendingResolveYears, pendingResolveExtras, reasonKey);
+}
+function verdictReasonLabel(key){
+  const r = VERDICT_REASONS.find(x=>x.key===key);
+  return r ? tr(r.ko, r.en) : '';
+}
 
 function playGavelSlamFX(){
   const scene = el('scene');
@@ -6082,7 +6285,7 @@ function vibrateFor(type, years){
   else navigator.vibrate(60);
 }
 
-function resolveVerdict(type, years, extras){
+function resolveVerdict(type, years, extras, reason){
   const c = state.currentCase;
   el('verdictPanel').style.display='none';
   playGavel();
@@ -6096,7 +6299,7 @@ function resolveVerdict(type, years, extras){
     setTimeout(()=>{ showAppealResentenceResult(type, years, outcome, extras||{}); }, 900);
     return;
   }
-  setTimeout(()=>{ showResultOverlay(type, years, outcome, extras||{}); }, 900);
+  setTimeout(()=>{ showResultOverlay(type, years, outcome, extras||{}, reason); }, 900);
 }
 
 function judge(c, type, years){
@@ -6117,7 +6320,7 @@ function judge(c, type, years){
   return {kind:'mild_harsh'};
 }
 
-function pushHistory(c, type, years, outcome){
+function pushHistory(c, type, years, outcome, reason){
   const score = type==='무죄' ? 0 : computeScore(type, years);
   const fairMid = (c.fairMin!=null && c.fairMax!=null) ? (c.fairMin+c.fairMax)/2 : null;
   let juryMatch = null;
@@ -6128,7 +6331,7 @@ function pushHistory(c, type, years, outcome){
   state.history.push({
     caseId:c.id, type, years,
     lenient:['벌금','집행유예','선고유예','무죄'].includes(type),
-    score, fairMid, juryMatch, outcomeKind: outcome.kind,
+    score, fairMid, juryMatch, outcomeKind: outcome.kind, reason,
     elapsedMs: state._lastElapsedMs || 0
   });
 
@@ -6154,14 +6357,14 @@ function pushHistory(c, type, years, outcome){
 }
 
 /* ================= Archive (persistent record) ================= */
-async function recordResult(c, label, resultKind){
+async function recordResult(c, label, resultKind, reason){
   try{
     let records = [];
     try{
       const res = await window.storage.get('archive', false);
       if(res && res.value) records = JSON.parse(res.value);
     }catch(e){ records = []; }
-    records.push({title:cf(c,'title'), verdict:label, resultLabel: resultLabel(resultKind), ts:Date.now(), elapsedMs: state._lastElapsedMs||0});
+    records.push({title:cf(c,'title'), verdict:label, resultLabel: resultLabel(resultKind), reason, ts:Date.now(), elapsedMs: state._lastElapsedMs||0});
     await window.storage.set('archive', JSON.stringify(records), false);
   }catch(e){ /* storage unavailable - ignore */ }
 }
@@ -6249,7 +6452,7 @@ function renderArchive(records, achievements, warrantRuns, appealRuns){
     return;
   }
   const rows = records.slice(-30).reverse().map(r=>`
-    <div class="archiveRow"><b>${r.title}</b><br>${tr('선고','Sentence')}: ${r.verdict} · ${tr('결과','Result')}: ${r.resultLabel}${r.elapsedMs ? ` · ⏱ ${(r.elapsedMs/1000).toFixed(1)}${tr('초','s')}` : ''}</div>
+    <div class="archiveRow"><b>${r.title}</b><br>${tr('선고','Sentence')}: ${r.verdict} · ${tr('결과','Result')}: ${r.resultLabel}${r.elapsedMs ? ` · ⏱ ${(r.elapsedMs/1000).toFixed(1)}${tr('초','s')}` : ''}${r.reason ? `<br><span style="color:var(--brass-dim);">📝 ${verdictReasonLabel(r.reason)}</span>` : ''}</div>
   `).join('');
   ov.innerHTML = `<h1>${t('records')}</h1>${careerHtml}${badgeHtml}${warrantHtml}${appealHtml}<div class="scroll-list" style="max-height:280px;overflow-y:auto;width:100%;">${rows}</div>
     <button class="btn secondary" onclick="showCaseLogScreen()">📔 ${tr('사건 수첩 보기','View Case Log')}</button>
@@ -6479,7 +6682,7 @@ function newspaperHTML(h){
 }
 
 /* ================= Result / overlays ================= */
-function showResultOverlay(type, years, outcome, extras){
+function showResultOverlay(type, years, outcome, extras, reason){
   extras = extras || {};
   const ov = el('overlay');
   ov.style.display='flex';
@@ -6487,7 +6690,7 @@ function showResultOverlay(type, years, outcome, extras){
   const c = state.currentCase;
   const wasAppealFlag = state._appealUsed;
 
-  recordResult(c, label + (wasAppealFlag && state._appealShown ? tr(' (항소 후 재선고)',' (re-sentenced after appeal)') : ''), outcome.kind);
+  recordResult(c, label + (wasAppealFlag && state._appealShown ? tr(' (항소 후 재선고)',' (re-sentenced after appeal)') : ''), outcome.kind, reason);
   if(state._isDailyCase){
     markDailyPlayed().then(d=>{ dailyStreakData = d; });
   }
@@ -6530,11 +6733,12 @@ function showResultOverlay(type, years, outcome, extras){
     return;
   }
   if(outcome.kind === 'correct_acquittal'){
-    pushHistory(c, type, years, outcome);
+    pushHistory(c, type, years, outcome, reason);
     ov.innerHTML = `${npHtml}
       <div class="stamp" style="border-color:var(--ok);color:var(--ok);">${tr('무죄','Not Guilty')}</div>
       <h2>${tr('무죄 선고','Not Guilty Verdict')}</h2>
       <p>${tr('알리바이와 증거를 근거로 냉정하게 판단한 정당한 무죄 판결입니다. 무고한 시민이 억울한 옥살이를 면했습니다.','A fair acquittal, soundly judged on the alibi and evidence. An innocent citizen was spared a wrongful imprisonment.')}</p>
+      ${reactionFeedHtml('correct_acquittal')}
       ${streakBadgeHtml()}
       <button class="btn" onclick="proceedNext()">${tr('다음 사건으로','Next Case')}</button>`;
     return;
@@ -6586,7 +6790,7 @@ function showResultOverlay(type, years, outcome, extras){
     return;
   }
 
-  pushHistory(c, type, years, outcome);
+  pushHistory(c, type, years, outcome, reason);
 
   state.suspicion = Math.min(5, state.suspicion + bump);
   if(bump>0 || state._comboBonusApplied) renderSuspicion(true);
@@ -6609,6 +6813,7 @@ function showResultOverlay(type, years, outcome, extras){
     <h2>${tr('선고 완료','Sentencing Complete')}</h2>
     <p>${tr('선고','Sentence')}: <b>${label}</b></p>
     ${messages.join('')}
+    ${reactionFeedHtml(outcome.kind)}
     ${bump>0 ? `<p style="color:var(--brass);">${tr('시민의심','Public Suspicion')} ${state.suspicion}/5</p>` : ''}
     ${streakBadgeHtml()}
     <button class="btn" onclick="proceedNext()">${tr('다음 사건으로','Next Case')}</button>`;
@@ -7537,7 +7742,7 @@ renderSuspicion();
 renderGauge();
 loadSettings();
 loadJudgeName();
-Promise.all([loadJudgeCareer(), loadDailyStreak(), loadCaseLog(), loadEarnedAchievements()]).then(()=>{
+Promise.all([loadJudgeCareer(), loadDailyStreak(), loadCaseLog(), loadEarnedAchievements(), loadRivalStats()]).then(()=>{
   if(el('overlay').innerHTML.includes(t('startTrial'))) showTitle();
 });
 showTitle();

@@ -233,6 +233,27 @@
     100%{transform:translate(-50%,0) rotate(10deg);opacity:1;}
   }
   .gavel-icon{position:absolute;left:50%;top:26%;font-size:44px;z-index:8;animation:gavelSlam 0.5s ease-in forwards;pointer-events:none;filter:drop-shadow(0 3px 2px rgba(0,0,0,0.6));}
+  @keyframes objectionPulse{
+    0%,100%{transform:translate(-50%,-50%) scale(1);}
+    50%{transform:translate(-50%,-50%) scale(1.08);}
+  }
+  @keyframes objectionIn{
+    0%{transform:translate(-50%,-50%) scale(0.4) rotate(-8deg);opacity:0;}
+    60%{transform:translate(-50%,-50%) scale(1.15) rotate(4deg);opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1;}
+  }
+  .objection-btn{
+    position:absolute;left:50%;top:42%;
+    animation:objectionIn 0.25s ease-out, objectionPulse 0.7s ease-in-out 0.25s infinite;
+    z-index:9;
+    background:linear-gradient(180deg,#e8434f,#a3141f);
+    color:#fff;font-family:inherit;font-weight:bold;letter-spacing:1px;
+    border:3px solid #ffe14d;border-radius:14px;
+    padding:14px 22px;font-size:14px;cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.55), 0 0 0 4px rgba(232,67,79,0.25);
+    text-shadow:1px 1px 0 rgba(0,0,0,0.4);
+  }
+  .objection-btn:active{filter:brightness(0.9);}
   @keyframes screenShake{
     0%,100%{transform:translateX(0);}
     20%{transform:translateX(-6px);}
@@ -330,6 +351,7 @@
   #dSpeaker.narrator{color:var(--brass);border-color:var(--brass);}
   #dSpeaker.defendant{color:#e8d2a0;border-color:var(--brass-dim);}
   #dSpeaker.judge{color:var(--parchment);border-color:var(--parchment-dim);}
+  #dSpeaker.objection{color:#ff8a8a;border-color:#e8434f;}
   #dText{font-size:16px;line-height:1.6;min-height:64px;padding-bottom:20px;}
   #dNext{
     position:absolute; right:14px; bottom:10px;
@@ -618,6 +640,7 @@
     .ev-detail-handwritten{ font-size:19px!important; }
     .ev-detail-handwritten .hw-source{ font-size:13px!important; }
     .choiceBtn{ font-size:17px!important; padding:13px 18px; }
+    .objection-btn{ font-size:20px!important; padding:20px 32px; border-width:4px; }
     #verdictPanel{ padding:26px 24px; }
     #verdictPanel h2{ font-size:20px!important; }
     #verdictPanel .sub{ font-size:16px!important; }
@@ -740,10 +763,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.6.0.0
+   미니법정(Mini Court)  ver 1.7.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.6.0.0';
+const GAME_VERSION = '1.7.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -796,7 +819,7 @@ const JUDGE_TITLES = [
   {min:35, ko:'대법관', en:'Supreme Court Justice'}
 ];
 const XP_PER_LEVEL = 100;
-let judgeCareer = {xp:0};
+let judgeCareer = {xp:0, reputation:50};
 function levelFromXp(xp){
   return Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
 }
@@ -805,19 +828,34 @@ function titleForLevel(level){
   for(const t of JUDGE_TITLES){ if(level >= t.min) cur = t; }
   return cur;
 }
+/* 경력(XP)은 계속 쌓이지만, 실제로 표시/적용되는 직급은 평판(reputation)에 따라
+   최대 1~2단계까지 깎일 수 있음 (승급/강등). 평판이 다시 회복되면 원래 XP에
+   맞는 직급으로 복귀함 — 즉, XP는 절대 줄지 않되 "현재 서 있는 자리"는
+   여론에 따라 오르내림. */
+function effectiveLevel(){
+  const xpLevel = levelFromXp(judgeCareer.xp);
+  const rep = judgeCareer.reputation==null ? 50 : judgeCareer.reputation;
+  if(rep < 20) return Math.max(1, xpLevel - 2);
+  if(rep < 35) return Math.max(1, xpLevel - 1);
+  return xpLevel;
+}
 async function loadJudgeCareer(){
   try{
     const res = await window.storage.get('judgeCareer', false);
     if(res && res.value) judgeCareer = JSON.parse(res.value);
   }catch(e){}
+  if(judgeCareer.reputation==null) judgeCareer.reputation = 50;
 }
 function addJudgeXpSync(amount){
-  if(amount<=0) return {leveledUp:false, newLevel:levelFromXp(judgeCareer.xp)};
-  const prevLevel = levelFromXp(judgeCareer.xp);
+  if(amount<=0) return;
   judgeCareer.xp += amount;
-  const newLevel = levelFromXp(judgeCareer.xp);
   try{ window.storage.set('judgeCareer', JSON.stringify(judgeCareer), false).catch(()=>{}); }catch(e){}
-  return {leveledUp:newLevel>prevLevel, newLevel};
+}
+function applyReputationDelta(delta){
+  if(!delta) return;
+  const rep = judgeCareer.reputation==null ? 50 : judgeCareer.reputation;
+  judgeCareer.reputation = Math.max(0, Math.min(100, rep + delta));
+  try{ window.storage.set('judgeCareer', JSON.stringify(judgeCareer), false).catch(()=>{}); }catch(e){}
 }
 function xpForOutcome(kind){
   switch(kind){
@@ -827,6 +865,46 @@ function xpForOutcome(kind){
     case 'suspicion': return 3;
     default: return 0;
   }
+}
+/* 평판은 XP와 별개로, 판결의 "질"에 따라 오르내림 (공정한 판결은 +, 시민의심을
+   사면 크게 -). 이 평판이 승급/강등을 좌우함. */
+function reputationForOutcome(kind){
+  switch(kind){
+    case 'fair': return 4;
+    case 'correct_acquittal': return 4;
+    case 'mild_lenient': case 'mild_harsh': return 1;
+    case 'suspicion': return -8;
+    default: return 0;
+  }
+}
+/* 결과 화면에 표시할 승급/강등 안내문 (있으면). 표시 후 플래그를 소비함. */
+function rankChangeHtml(){
+  if(!state._lastRankChange) return '';
+  const ti = titleForLevel(state._lastRankLevel);
+  let html;
+  if(state._lastRankChange==='up'){
+    html = `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastRankLevel} ${ti.ko}`, `Level Up! Lv.${state._lastRankLevel} ${ti.en}`)}</p>`;
+  } else {
+    html = `<p style="color:var(--danger);font-weight:bold;">📉 ${tr(`평판이 나빠져 Lv.${state._lastRankLevel} ${ti.ko}(으)로 좌천되었습니다.`, `Reputation has fallen — demoted to Lv.${state._lastRankLevel} ${ti.en}.`)}</p>`;
+  }
+  state._lastRankChange = null;
+  return html;
+}
+/* 경력 XP와 평판을 함께 갱신하고, 승급/강등 여부를 반환하는 저수준 헬퍼 */
+function applyCareerDelta(xpAmount, repDelta){
+  const prevEffLevel = effectiveLevel();
+  addJudgeXpSync(xpAmount);
+  applyReputationDelta(repDelta);
+  const newEffLevel = effectiveLevel();
+  let rankChange = null;
+  if(newEffLevel > prevEffLevel) rankChange = 'up';
+  else if(newEffLevel < prevEffLevel) rankChange = 'down';
+  return {xpGain: xpAmount, rankChange, newLevel: newEffLevel};
+}
+/* 판결 결과(outcome.kind) 기준으로 경력 XP + 평판을 함께 갱신 */
+function recordCareerProgress(outcomeKind, bonus){
+  const xp = xpForOutcome(outcomeKind) + (bonus||0);
+  return applyCareerDelta(xp, reputationForOutcome(outcomeKind));
 }
 
 /* ================= 오늘의 사건 + 연속 출석 ================= */
@@ -5334,6 +5412,43 @@ function showDialogue(item, cb){
   };
 }
 
+/* "이의 있습니다!" 타이밍 버튼: 제한 시간 안에 누르면 증거 제시 기회로 이어지고,
+   놓치면(시간 초과 또는 그냥 대사창을 눌러 넘김) 아무 일 없이 지나감. */
+let objectionTimeout = null;
+function showObjectionMoment(item, cb){
+  let resolved = false;
+  showDialogue(item, ()=>{
+    if(resolved) return;
+    resolved = true;
+    clearObjectionButton();
+    cb(false);
+  });
+  spawnObjectionButton(()=>{
+    if(resolved) return;
+    resolved = true;
+    clearObjectionButton();
+    el('dialogueBox').onclick = null; // 이후 대사창 탭이 중복으로 콜백을 부르지 않도록 함
+    playCrowdReaction('gasp');
+    cb(true);
+  });
+}
+function spawnObjectionButton(onClick){
+  clearObjectionButton();
+  const btn = document.createElement('button');
+  btn.id = 'objectionBtn';
+  btn.className = 'objection-btn';
+  btn.textContent = '🚨 ' + tr('이의 있습니다!','Objection!');
+  btn.onclick = (e)=>{ e.stopPropagation(); onClick(); };
+  const scene = el('scene');
+  if(scene) scene.appendChild(btn);
+  objectionTimeout = setTimeout(()=>{ clearObjectionButton(); }, 4500);
+}
+function clearObjectionButton(){
+  if(objectionTimeout){ clearTimeout(objectionTimeout); objectionTimeout = null; }
+  const btn = el('objectionBtn');
+  if(btn) btn.remove();
+}
+
 /* 피고인은 대사가 없는 순간에도 검사/변호인의 발언에 조용히 반응함 (가끔 울거나 화냄) */
 function pickDefendantReaction(){
   const roll = Math.random();
@@ -5351,20 +5466,49 @@ const STAMMER_LINES = [
   {who:'defendant', ko:'그, 그러니까 제 말은... (침묵) ...죄, 죄송합니다, 다시 말씀드리겠습니다.', en:"W-what I mean is... (silence) ...s-sorry, let me say that again."},
   {who:'def', ko:'흠, 흠! 그, 그 부분은... 피고인과 다시 한번 확인해보겠습니다.', en:"Ahem- ahem! Th-that part, I'll... I'll need to check with my client again."}
 ];
-function buildCrossExamChoice(baseShift){
+/* ================= "이의 있습니다!" 타이밍 + 증거 제시 ================= */
+/* 반대신문 클라이맥스: 변호인 측 답변에서 미심쩍은 부분이 나오는 순간,
+   제한 시간 안에 "이의 있습니다!" 버튼을 눌러야만 증거를 제시할 기회가
+   생긴다. 놓치면 그냥 다음으로 넘어감(기존의 '그냥 넘어간다'와 동일). */
+function buildObjectionMoment(baseShift){
   return {
-    type:'choice',
+    type:'objection',
+    name: t('defenseLabel'),
+    who:'def',
+    mood:'worried',
     bgmMood:'tense',
     baseShift: baseShift||0,
-    prompt: tr(
-      '방금 변호인 측 답변에서 미심쩍은 부분이 느껴집니다. 증거물을 근거로 다시 캐물으시겠습니까?',
-      "Something about the defense's last answer feels off. Do you want to press further, citing the evidence?"
-    ),
-    options:[
-      {label:'🔍 '+tr('증거로 되묻는다','Press with the evidence'), key:'press'},
-      {label:tr('그냥 넘어간다','Let it go'), key:'pass'}
-    ]
+    text: tr(
+      '...방금 변호인 측 답변, 어딘가 석연치 않습니다.',
+      "...Something about the defense's last answer doesn't sit right."
+    )
   };
+}
+/* 이의 제기에 성공하면 뜨는, 어떤 증거로 반박할지 고르는 선택지
+   (사건마다 등록된 증거물을 그대로 선택지로 사용 — 추가 데이터 불필요) */
+function buildEvidencePickChoice(c, baseShift){
+  const ev = cevidence(c) || [];
+  const options = ev.map((e,i)=>({label: e.icon+' '+e.name, key:'ev'+i}));
+  options.push({label:tr('증거를 제시하지 않는다','Present no evidence'), key:'none'});
+  return {
+    type:'choice',
+    choiceType:'evidence_pick',
+    bgmMood:'tense',
+    baseShift: baseShift||0,
+    prompt: tr('이의 있습니다! 어떤 증거로 반박하시겠습니까?','Objection! Which evidence will you use to counter?'),
+    options
+  };
+}
+function buildEvidencePresentedFollowUp(choiceKey, baseShift){
+  const NM = t('narratorLabel');
+  if(choiceKey === 'none'){
+    return [{type:'narrator', name:NM, text:tr('결국 결정적인 증거를 내놓지 못한 채, 반박의 기회를 흘려보냈습니다.','In the end, no decisive evidence was offered, and the chance to rebut slipped away.'), shift:(baseShift||0)>=0?-2:2}];
+  }
+  const idx = parseInt(String(choiceKey).replace('ev',''), 10);
+  const ev = (cevidence(state.currentCase)||[])[idx];
+  const evName = ev ? ev.name : tr('증거','the evidence');
+  const impact = [{type:'narrator', name:NM, text:tr(`『${evName}』을(를) 근거로 몰아붙이자, 상대측 진술이 급격히 흔들리기 시작합니다!`, `Pressing the point with "${evName}" as evidence, the opposing side's story suddenly starts to fall apart!`), sfx:'gasp', shift:(baseShift||0)>=0?6:-6}];
+  return impact.concat(buildStammerFollowUp(baseShift));
 }
 function buildStammerFollowUp(baseShift){
   const pick = STAMMER_LINES[Math.floor(Math.random()*STAMMER_LINES.length)];
@@ -5408,6 +5552,52 @@ function buildOutburstAftermath(choiceKey){
     return [{type:'narrator', name:NM, text:tr('법원 경위가 피고인을 제지하는 가운데, 재판장은 법정 모욕에 대해 추가 감치 처분을 명령합니다.','As bailiffs restrain the defendant, the judge orders additional custody for contempt of court.'), who:'defendant', defendantMood:'distressed', shift:2}];
   }
   return [{type:'narrator', name:NM, text:tr('재판장의 근엄한 경고에 피고인은 겨우 진정하고 다시 자리에 앉습니다.',"At the judge's stern warning, the defendant finally calms down and sits back down."), who:'defendant', defendantMood:'worried', shift:-1}];
+}
+
+/* ================= 돌발 이벤트: 갑작스러운 증인 등장 ================= */
+function buildSurpriseWitnessEvent(){
+  const NM = t('narratorLabel');
+  return [
+    {type:'narrator', name:NM, text:tr('그때, 방청석 뒤편에서 누군가 손을 들며 외쳤습니다. "잠깐! 저도 이 사건에 대해 드릴 말씀이 있습니다!" 예정에 없던 증인의 등장에 법정이 술렁입니다.','Just then, someone at the back of the gallery raised a hand and called out, "Wait! I have something to say about this case!" The courtroom stirs at the unexpected witness.'), sfx:'gasp', bgmMood:'tense'},
+    {type:'narrator', name:NM, text:tr('증인은 사건 당일 우연히 현장 근처에 있었다며 새로운 진술을 내놓았습니다.','The witness claims to have happened to be near the scene that day, and offers a new account.'), bgmMood:'tense'},
+    {type:'choice', choiceType:'witness', bgmMood:'tense',
+      prompt: tr('예정에 없던 증인의 진술입니다. 어떻게 하시겠습니까?','This is an unscheduled witness statement. How do you proceed?'),
+      options:[
+        {label:tr('진술을 신중히 채택한다','Carefully admit the testimony'), key:'admit'},
+        {label:tr('신빙성에 의문을 제기하며 배제한다','Question its credibility and exclude it'), key:'exclude'}
+      ]
+    }
+  ];
+}
+function buildWitnessAftermath(choiceKey){
+  const NM = t('narratorLabel');
+  if(choiceKey==='admit'){
+    return [{type:'narrator', name:NM, text:tr('갑작스러운 증언이었지만, 재판장은 이를 참고 자료로 받아들이기로 했습니다.','Though sudden, the judge decides to accept the testimony as a point of reference.'), shift:3}];
+  }
+  return [{type:'narrator', name:NM, text:tr('재판장은 사전 고지 없는 증언의 신빙성을 문제 삼아 이를 받아들이지 않기로 했습니다.','The judge declines to admit the testimony, citing concerns about its credibility given the lack of prior notice.'), shift:-1}];
+}
+
+/* ================= 돌발 이벤트: 검찰 측 증거 수집 절차 논란 ================= */
+function buildMisconductEvent(){
+  const NM = t('narratorLabel'), PROS = t('prosecutorLabel');
+  return [
+    {type:'narrator', name:NM, text:tr('변호인이 서류를 뒤적이다 목소리를 높였습니다. "재판장님! 검찰 측 증거 수집 과정에 문제가 있었다는 정황이 발견되었습니다!"','The defense attorney raises their voice while flipping through documents. "Your honor! We\'ve found evidence that the prosecution\'s evidence-gathering process was flawed!"'), sfx:'gasp', bgmMood:'tense'},
+    {type:'prosecutor', name:PROS, text:tr('그, 그건 단순한 절차상의 착오였을 뿐입니다!','Th-that was merely a minor procedural error!'), who:'pros', mood:'flustered', bgmMood:'tense'},
+    {type:'choice', choiceType:'misconduct', bgmMood:'tense',
+      prompt: tr('검찰 측 증거 수집 절차에 대한 이의 제기가 있었습니다. 어떻게 판단하시겠습니까?','An objection has been raised about the prosecution\'s evidence-gathering procedure. How do you rule?'),
+      options:[
+        {label:tr('해당 증거의 증거능력을 제한한다','Limit the admissibility of that evidence'), key:'limit'},
+        {label:tr('절차상 문제는 경미하다고 판단한다','Rule the procedural issue to be minor'), key:'ignore'}
+      ]
+    }
+  ];
+}
+function buildMisconductAftermath(choiceKey){
+  const NM = t('narratorLabel');
+  if(choiceKey==='limit'){
+    return [{type:'narrator', name:NM, text:tr('재판장은 절차적 정당성을 중시해 해당 증거의 증거능력을 제한하기로 했습니다.','Valuing procedural legitimacy, the judge decides to limit the admissibility of that evidence.'), shift:-3}];
+  }
+  return [{type:'narrator', name:NM, text:tr('재판장은 경미한 절차상 하자로 보아 증거능력에는 영향이 없다고 판단했습니다.','The judge rules the procedural flaw to be minor and finds it does not affect admissibility.'), shift:3}];
 }
 
 function showChoice(item, cb){
@@ -5583,7 +5773,7 @@ function buildDialogueQueue(c){
     q.push({type:'defense', name:DEF, text:rr.d, who:'def', mood: defAngry?'angry':(escalate?'worried':'neutral'), shift:r.momentum, bgmMood: defendantMood2==='crying'?'somber':(defAngry?'tense':null), defendantMood: defendantMood2});
   });
   if(c.evidence && c.evidence.length && c.rounds && c.rounds.length>=2){
-    q.push(buildCrossExamChoice(c.rounds[c.rounds.length-1].momentum));
+    q.push(buildObjectionMoment(c.rounds[c.rounds.length-1].momentum));
   }
   q.push({type:'prosecutor', name:PROS+tr(' (구형)',' (Sentencing Request)'), text:withJudgeClosing(cf(c,'prosFinal'), tr('엄중한 처벌을 부탁드립니다','I ask for a stern punishment')), who:'pros', mood:'angry', bgmMood:'tense'});
   q.push({type:'defense', name:DEF+tr(' (최후 변론)',' (Closing Argument)'), text:withJudgeClosing(cf(c,'defFinal'), tr('부디 선처를 부탁드립니다','I ask for your leniency')), who:'def', mood:'worried', bgmMood:'tense'});
@@ -5598,11 +5788,18 @@ function buildDialogueQueue(c){
     q.splice(insertPos, 0, {type:'narrator', name:NM, text:evText, who:null, sfx:ev.sfx});
   }
 
-  /* 피고인이 가끔 법정에서 소리지르며 난동을 피움 (사건당 최대 한 번) */
-  if(c.rounds.length>=2 && Math.random()<0.22){
-    const outburst = buildOutburstEvent();
-    const insertPos2 = Math.max(3, Math.min(q.length-2, 3+Math.floor(Math.random()*(q.length-5))));
-    q.splice(insertPos2, 0, ...outburst);
+  /* 돌발 이벤트: 사건당 최대 하나만 발생하도록 서로 배타적으로 확률을 나눔
+     (난동 18% / 증인 등장 12% / 증거수집 논란 10% / 아무 일도 없음 60%) */
+  if(c.rounds.length>=2){
+    const roll = Math.random();
+    let special = null;
+    if(roll < 0.18) special = buildOutburstEvent();
+    else if(roll < 0.30) special = buildSurpriseWitnessEvent();
+    else if(roll < 0.40) special = buildMisconductEvent();
+    if(special){
+      const insertPos2 = Math.max(3, Math.min(q.length-2, 3+Math.floor(Math.random()*(q.length-5))));
+      q.splice(insertPos2, 0, ...special);
+    }
   }
 
   state.dlgQueue = q;
@@ -5624,16 +5821,30 @@ function playQueue(){
   if(item.bgmMood){
     setSceneBGM(item.bgmMood, state.currentCase && state.currentCase.tag);
   }
+  if(item.type === 'objection'){
+    showObjectionMoment(item, (didObject)=>{
+      if(didObject){
+        state.dlgQueue.splice(state.dlgPos+1, 0, buildEvidencePickChoice(state.currentCase, item.baseShift));
+      }
+      state.dlgPos++;
+      playQueue();
+    });
+    return;
+  }
   if(item.type === 'choice'){
     showChoice(item, (choiceKey)=>{
+      let extra = null;
       if(item.choiceType === 'outburst'){
         state._contemptPunish = (choiceKey==='punish');
-        const extra = buildOutburstAftermath(choiceKey);
-        state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
-      } else if(choiceKey==='press'){
-        const extra = buildStammerFollowUp(item.baseShift);
-        state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
+        extra = buildOutburstAftermath(choiceKey);
+      } else if(item.choiceType === 'witness'){
+        extra = buildWitnessAftermath(choiceKey);
+      } else if(item.choiceType === 'misconduct'){
+        extra = buildMisconductAftermath(choiceKey);
+      } else if(item.choiceType === 'evidence_pick'){
+        extra = buildEvidencePresentedFollowUp(choiceKey, item.baseShift);
       }
+      if(extra) state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
       state.dlgPos++;
       playQueue();
     });
@@ -5946,10 +6157,11 @@ function pushHistory(c, type, years, outcome){
     state.streak = 0;
   }
 
-  // 경력 XP + 사건 수첩 갱신
-  const xp = xpForOutcome(outcome.kind);
-  state._lastXpGain = xp;
-  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  // 경력 XP + 평판(승급/강등) + 사건 수첩 갱신
+  const prog = recordCareerProgress(outcome.kind);
+  state._lastXpGain = prog.xpGain;
+  state._lastRankChange = prog.rankChange;
+  state._lastRankLevel = prog.newLevel;
   updateCaseLog(c.id, outcome.kind);
 }
 
@@ -6018,10 +6230,11 @@ function renderArchive(records, achievements, warrantRuns, appealRuns){
   });
   const badgeHtml = badgeNames.length ? `<div class="lawtext">🏅 ${tr('획득한 업적','Achievements Earned')}<br>${badgeNames.join(', ')}</div>` : '';
 
-  const lvl = levelFromXp(judgeCareer.xp);
+  const lvl = effectiveLevel();
   const titleInfo = titleForLevel(lvl);
+  const rep = judgeCareer.reputation==null ? 50 : judgeCareer.reputation;
   const logSum = caseLogSummary();
-  const careerHtml = `<div class="lawtext">🎖️ ${tr('경력','Career')}: Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} (${judgeCareer.xp} XP)<br>📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}${dailyStreakData.streak>0 ? `<br>🔥 ${tr('연속 출석','Daily Streak')}: ${dailyStreakData.streak}${tr('일',' days')} (${tr('최고 기록','best')}: ${dailyStreakData.longest||dailyStreakData.streak})` : ''}</div>`;
+  const careerHtml = `<div class="lawtext">🎖️ ${tr('경력','Career')}: Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} (${judgeCareer.xp} XP)<br>📊 ${tr('평판','Reputation')}: ${rep}/100<br>📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}${dailyStreakData.streak>0 ? `<br>🔥 ${tr('연속 출석','Daily Streak')}: ${dailyStreakData.streak}${tr('일',' days')} (${tr('최고 기록','best')}: ${dailyStreakData.longest||dailyStreakData.streak})` : ''}</div>`;
 
   let warrantHtml = '';
   if(warrantRuns.length){
@@ -6419,11 +6632,7 @@ function streakBadgeHtml(){
   }
   if(state._lastXpGain > 0){
     let xpLine = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
-    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
-      const t = titleForLevel(state._lastLevelUpResult.newLevel);
-      xpLine += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${t.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${t.en}`)}</p>`;
-      state._lastLevelUpResult = null;
-    }
+    xpLine += rankChangeHtml();
     parts.push(xpLine);
   }
   if(freshAch.length){
@@ -6623,6 +6832,7 @@ function quitGame(){
 
 function showTitle(){
   inTrial = false;
+  clearObjectionButton();
   el('evidenceBtn').style.display='none';
   el('summaryBtn').style.display='none';
   document.querySelectorAll('.end-vignette,.confetti').forEach(e=>e.remove());
@@ -6631,16 +6841,17 @@ function showTitle(){
   syncHudLabels();
   const ov = el('overlay');
   ov.style.display='flex';
-  const lvl = levelFromXp(judgeCareer.xp);
+  const lvl = effectiveLevel();
   const titleInfo = titleForLevel(lvl);
   const xpIntoLevel = judgeCareer.xp % XP_PER_LEVEL;
+  const rep = judgeCareer.reputation==null ? 50 : judgeCareer.reputation;
   const streakN = dailyStreakData.streak || 0;
   const logSum = caseLogSummary();
   ov.innerHTML = `
     <img src="icon-512.png" alt="Mini Court logo" style="width:56px;height:56px;border-radius:12px;margin-bottom:4px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
     <h1 style="font-size:18px;margin:0 0 4px;">미니법정<span style="font-size:12px;color:var(--parchment-dim);">(Mini Court)</span></h1>
     <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:3px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
-    <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP)</span></div>
+    <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
     <p style="font-size:12px;color:var(--brass);margin:0 0 2px;line-height:1.25;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
     <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:3px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
     <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
@@ -7218,9 +7429,10 @@ function decideAppeal(choice){
 }
 
 function showAppealJudgmentResult(correct){
-  const xp = correct ? 12 : 0;
-  state._lastXpGain = xp;
-  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  const prog = applyCareerDelta(correct ? 12 : 0, correct ? 3 : -3);
+  state._lastXpGain = prog.xpGain;
+  state._lastRankChange = prog.rankChange;
+  state._lastRankLevel = prog.newLevel;
   playCrowdReaction(correct ? 'clap' : 'boo');
   const ov = el('overlay');
   ov.style.display='flex';
@@ -7230,12 +7442,8 @@ function showAppealJudgmentResult(correct){
   let xpHtml = '';
   if(state._lastXpGain>0){
     xpHtml = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
-    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
-      const ti = titleForLevel(state._lastLevelUpResult.newLevel);
-      xpHtml += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${ti.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${ti.en}`)}</p>`;
-      state._lastLevelUpResult = null;
-    }
   }
+  xpHtml += rankChangeHtml();
   ov.innerHTML = `
     <div class="stamp" style="border-color:${correct?'var(--ok)':'var(--danger)'};color:${correct?'var(--ok)':'var(--danger)'};">${tr('항소 기각','Appeal Dismissed')}</div>
     <h2>${resultLine}</h2>
@@ -7249,9 +7457,10 @@ function showAppealResentenceResult(type, years, outcome, extras){
   const wasOverturnRight = appealState._lastOverturnWasRight;
   const last = appealState.results[appealState.results.length-1];
   if(last){ last.newLabel = label; }
-  const xp = xpForOutcome(outcome.kind) + (wasOverturnRight ? 5 : 0);
-  state._lastXpGain = xp;
-  state._lastLevelUpResult = xp>0 ? addJudgeXpSync(xp) : null;
+  const prog = recordCareerProgress(outcome.kind, wasOverturnRight ? 5 : 0);
+  state._lastXpGain = prog.xpGain;
+  state._lastRankChange = prog.rankChange;
+  state._lastRankLevel = prog.newLevel;
   playCrowdReaction(REACTION_MAP[outcome.kind] || 'murmur');
   const ov = el('overlay');
   ov.style.display='flex';
@@ -7261,12 +7470,8 @@ function showAppealResentenceResult(type, years, outcome, extras){
   let xpHtml = '';
   if(state._lastXpGain>0){
     xpHtml = `<p style="font-size:11px;color:var(--parchment-dim);">+${state._lastXpGain} XP</p>`;
-    if(state._lastLevelUpResult && state._lastLevelUpResult.leveledUp){
-      const ti = titleForLevel(state._lastLevelUpResult.newLevel);
-      xpHtml += `<p style="color:var(--ok);font-weight:bold;">🎖️ ${tr(`레벨 업! Lv.${state._lastLevelUpResult.newLevel} ${ti.ko}`, `Level Up! Lv.${state._lastLevelUpResult.newLevel} ${ti.en}`)}</p>`;
-      state._lastLevelUpResult = null;
-    }
   }
+  xpHtml += rankChangeHtml();
   ov.innerHTML = `
     <div class="stamp" style="border-color:${wasOverturnRight?'var(--ok)':'var(--danger)'};color:${wasOverturnRight?'var(--ok)':'var(--danger)'};">${tr('파기환송','Overturned')}</div>
     <h2>${tr('새 판결','New Sentence')}: ${label}</h2>

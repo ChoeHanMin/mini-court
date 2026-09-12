@@ -677,10 +677,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.1.0.0
+   미니법정(Mini Court)  ver 1.2.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.1.0.0';
+const GAME_VERSION = '1.2.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -981,6 +981,8 @@ function setMasterVolume(v){
   settings.masterVolume = Math.max(0, Math.min(100, parseInt(v,10)||0))/100;
   titleThemeAudio.volume = 0.35 * settings.masterVolume;
   if(ambientNoiseGain) ambientNoiseGain.gain.value = muted ? 0 : 0.022*settings.masterVolume;
+  Object.values(REAL_TRACKS).forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume; });
+  [resultGoodAudio, resultBadAudio].forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume; });
   saveSettings();
 }
 async function saveSettings(){
@@ -1170,6 +1172,54 @@ function stopTitleTheme(){
 }
 document.addEventListener('pointerdown', ()=>{ playTitleTheme(); }, { once:true });
 
+/* ================= 재판 진행/긴장감 테마곡 (녹음된 음원, 절차적 합성음악 대체) ================= */
+const REAL_TRACKS = {
+  trial: new Audio('trial_theme.mp3'), /* 재판 진행 중 상시 재생 (코믹/무거운 사건 포함 전체) */
+  tense: new Audio('tense_theme.mp3'), /* 긴장감 고조 시 재생 */
+};
+REAL_TRACKS.trial.loop = true;
+REAL_TRACKS.tense.loop = true;
+const REAL_TRACK_BASE_VOL = 0.5;
+function playRealTrack(key){
+  const a = REAL_TRACKS[key];
+  if(!a || muted || settings.masterVolume<=0) return;
+  a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume;
+  const p = a.play();
+  if(p && p.catch) p.catch(()=>{});
+}
+function stopRealTracks(){
+  Object.values(REAL_TRACKS).forEach(a=>{ if(!a.paused) a.pause(); });
+}
+
+/* ================= 판결 결과 음악 (녹음된 음원, 1회 재생) ================= */
+const resultGoodAudio = new Audio('result_good.mp3'); /* 합리적인 판결 */
+const resultBadAudio = new Audio('result_bad.mp3');   /* 부당한 판결 / 법왜곡죄 */
+function playResultAudio(good){
+  stopResultAudio();
+  const a = good ? resultGoodAudio : resultBadAudio;
+  if(muted || settings.masterVolume<=0) return;
+  a.currentTime = 0;
+  a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume;
+  const p = a.play();
+  if(p && p.catch) p.catch(()=>{});
+}
+function stopResultAudio(){
+  [resultGoodAudio, resultBadAudio].forEach(a=>{ if(!a.paused){ a.pause(); a.currentTime = 0; } });
+}
+
+/* ================= 메뉴 버튼 클릭 효과음 ================= */
+const clickSfx = new Audio('click_sfx.mp3');
+function playClickSfx(){
+  if(muted || settings.masterVolume<=0) return;
+  clickSfx.currentTime = 0;
+  clickSfx.volume = Math.min(1, 0.7 * settings.masterVolume);
+  const p = clickSfx.play();
+  if(p && p.catch) p.catch(()=>{});
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('#overlay') && e.target.closest('button')) playClickSfx();
+}, true); /* 캡처 단계에서 감지: 버튼 자체의 onclick이 DOM을 바꾸기 전에 먼저 확인해야 함 */
+
 function ensureAudio(){
   if(!audioCtx){
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
@@ -1326,10 +1376,12 @@ let currentBgmMood = null;
 function setSceneBGM(mood, tag){
   const key = mood + '|' + (tag||'');
   if(currentBgmMood === key) return;
+  stopBGM();
   if(mood==='verdict') startBGM('verdict');
-  else if(mood==='tense') startBGM('tense', tag);
+  else if(mood==='tense') playRealTrack('tense');
   else if(mood==='grand') startBGM('grand', tag);
   else if(mood==='somber') startBGM('somber', tag);
+  else if(mood==='calm') playRealTrack('trial');
   else startBGM('ambient', tag);
   currentBgmMood = key;
 }
@@ -1346,6 +1398,8 @@ function stopBGM(){
   if(bgmInterval) clearInterval(bgmInterval);
   bgmInterval = null;
   stopCrowdMurmur();
+  stopRealTracks();
+  stopResultAudio();
 }
 
 el = id=>document.getElementById(id);
@@ -5915,10 +5969,11 @@ function showResultOverlay(type, years, outcome, extras){
     markDailyPlayed().then(d=>{ dailyStreakData = d; });
   }
   playCrowdReaction(REACTION_MAP[outcome.kind] || 'murmur');
+  stopBGM();
+  playResultAudio(outcome.kind==='fair' || outcome.kind==='correct_acquittal');
   const npHtml = newspaperHTML(craftHeadline(c, type, years, outcome));
 
   if(outcome.kind === 'distortion_innocent'){
-    stopBGM();
     ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
       <div class="stamp">${tr('파기','Overturned')}</div>
       <h1>THE END</h1>
@@ -5929,7 +5984,6 @@ function showResultOverlay(type, years, outcome, extras){
     return;
   }
   if(outcome.kind === 'distortion_illegal'){
-    stopBGM();
     ov.innerHTML = `<div class="end-vignette"></div>${npHtml}
       <div class="stamp">${tr('파기','Overturned')}</div>
       <h1>THE END</h1>
@@ -5940,7 +5994,6 @@ function showResultOverlay(type, years, outcome, extras){
     return;
   }
   if(outcome.kind === 'distortion_harsh' || outcome.kind === 'distortion_lenient'){
-    stopBGM();
     const reason = outcome.kind==='distortion_harsh'
       ? tr('죄질에 비해 지나치게 가혹한 판결이라는 여론이 들끓었습니다.','Public outrage erupted over a sentence far too harsh for the severity of the crime.')
       : tr('중대한 범죄에 비해 지나치게 관대한 판결이라는 비판이 쏟아졌습니다.','Criticism poured in over a sentence far too lenient for such a serious crime.');
@@ -6936,7 +6989,14 @@ el('muteBtn').addEventListener('click', ()=>{
   muted = !muted;
   el('muteBtn').textContent = muted? ('🔇 ' + t('muteOff')) : ('🔊 ' + t('muteOn'));
   if(ambientNoiseGain) ambientNoiseGain.gain.value = muted? 0 : 0.022*settings.masterVolume;
-  if(muted) stopTitleTheme(); else if(el('overlay').style.display!=='none') playTitleTheme();
+  if(muted){
+    stopTitleTheme();
+    stopRealTracks();
+  } else {
+    if(el('overlay').style.display!=='none') playTitleTheme();
+    if(currentBgmMood && currentBgmMood.startsWith('calm|')) playRealTrack('trial');
+    else if(currentBgmMood && currentBgmMood.startsWith('tense|')) playRealTrack('tense');
+  }
 });
 el('evidenceBtn').addEventListener('click', showEvidence);
 el('summaryBtn').addEventListener('click', showSummary);

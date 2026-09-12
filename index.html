@@ -740,10 +740,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.5.0.0
+   미니법정(Mini Court)  ver 1.6.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.5.0.0';
+const GAME_VERSION = '1.6.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1028,7 +1028,11 @@ async function showLegalDisclaimer(next){
 }
 
 /* ================= Settings ================= */
-let settings = { typeSpeed:26, largeText:false, showHint:false, lang:'ko', highContrast:false, masterVolume:1 };
+let settings = { typeSpeed:26, largeText:false, showHint:false, lang:'ko', highContrast:false, masterVolume:1, musicVolume:1 };
+/* 배경음악(타이틀 테마/재판·긴장감 테마/판결 결과음/절차적 BGM/방청객 웅성임)에만
+   적용되는 배율. 전체 음량(masterVolume)과 곱해져서 최종 볼륨이 됨.
+   효과음(클릭/망치소리/박수 등)에는 영향을 주지 않음. */
+function musicVol(){ return settings.masterVolume * (settings.musicVolume==null?1:settings.musicVolume); }
 async function loadSettings(){
   try{
     const res = await window.storage.get('settings', false);
@@ -1037,15 +1041,24 @@ async function loadSettings(){
   document.getElementById('stage').classList.toggle('large-text', !!settings.largeText);
   document.getElementById('stage').classList.toggle('high-contrast', !!settings.highContrast);
   if(settings.masterVolume==null) settings.masterVolume = 1;
-  titleThemeAudio.volume = 0.35 * settings.masterVolume;
+  if(settings.musicVolume==null) settings.musicVolume = 1;
+  titleThemeAudio.volume = 0.35 * musicVol();
   syncHudLabels();
+}
+function applyMusicVolumeToPlayingTracks(){
+  titleThemeAudio.volume = 0.35 * musicVol();
+  if(ambientNoiseGain) ambientNoiseGain.gain.value = muted ? 0 : 0.022*musicVol();
+  Object.values(REAL_TRACKS).forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * musicVol(); });
+  [resultGoodAudio, resultBadAudio].forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * musicVol(); });
 }
 function setMasterVolume(v){
   settings.masterVolume = Math.max(0, Math.min(100, parseInt(v,10)||0))/100;
-  titleThemeAudio.volume = 0.35 * settings.masterVolume;
-  if(ambientNoiseGain) ambientNoiseGain.gain.value = muted ? 0 : 0.022*settings.masterVolume;
-  Object.values(REAL_TRACKS).forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume; });
-  [resultGoodAudio, resultBadAudio].forEach(a=>{ a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume; });
+  applyMusicVolumeToPlayingTracks();
+  saveSettings();
+}
+function setMusicVolume(v){
+  settings.musicVolume = Math.max(0, Math.min(100, parseInt(v,10)||0))/100;
+  applyMusicVolumeToPlayingTracks();
   saveSettings();
 }
 async function saveSettings(){
@@ -1245,8 +1258,8 @@ REAL_TRACKS.tense.loop = true;
 const REAL_TRACK_BASE_VOL = 0.5;
 function playRealTrack(key){
   const a = REAL_TRACKS[key];
-  if(!a || muted || settings.masterVolume<=0) return;
-  a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume;
+  if(!a || muted || musicVol()<=0) return;
+  a.volume = REAL_TRACK_BASE_VOL * musicVol();
   const p = a.play();
   if(p && p.catch) p.catch(()=>{});
 }
@@ -1260,9 +1273,9 @@ const resultBadAudio = new Audio('result_bad.mp3');   /* 부당한 판결 / 법�
 function playResultAudio(good){
   stopResultAudio();
   const a = good ? resultGoodAudio : resultBadAudio;
-  if(muted || settings.masterVolume<=0) return;
+  if(muted || musicVol()<=0) return;
   a.currentTime = 0;
-  a.volume = REAL_TRACK_BASE_VOL * settings.masterVolume;
+  a.volume = REAL_TRACK_BASE_VOL * musicVol();
   const p = a.play();
   if(p && p.catch) p.catch(()=>{});
 }
@@ -1341,7 +1354,7 @@ function startCrowdMurmur(){
   const filter = audioCtx.createBiquadFilter();
   filter.type = 'lowpass'; filter.frequency.value = 500;
   const gain = audioCtx.createGain();
-  gain.gain.value = muted ? 0 : 0.022*settings.masterVolume;
+  gain.gain.value = muted ? 0 : 0.022*musicVol();
   src.connect(filter).connect(gain).connect(audioCtx.destination);
   src.start();
   ambientNoiseSource = src;
@@ -1432,8 +1445,9 @@ function startBGM(mode, tag){
   bgmInterval = setInterval(()=>{
     const f = notes[bgmStep % notes.length];
     if(f){
-      playTone(f, interval/1000*0.92, type, vol);
-      if(bassHalf) playTone(f/2, interval/1000*0.92, 'sine', vol*0.85);
+      const v = vol * (settings.musicVolume==null?1:settings.musicVolume);
+      playTone(f, interval/1000*0.92, type, v);
+      if(bassHalf) playTone(f/2, interval/1000*0.92, 'sine', v*0.85);
     }
     bgmStep++;
   }, interval);
@@ -1900,8 +1914,8 @@ const CASES = [
   },
   precedent:'비슷한 생계형 절도 사건에서는 선고유예~벌금형, 또는 짧은 집행유예가 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'CCTV 영상', desc:'피고인이 물건을 담아 나가는 장면이 촬영됨'},
-    {icon:'🧾', name:'피해 품목 영수증 사본', desc:'빵과 우유, 합계 5,400원 상당'}
+    {icon:'📹', name:'CCTV 영상', desc:'피고인이 물건을 담아 나가는 장면이 촬영됨', detail:{type:'cctv', timestamp:'사건 당일 21:14 — 편의점 내부 CCTV', caption:'피고인이 진열대에서 빵과 우유를 집어 계산대를 지나치지 않고 곧장 출입문으로 향하는 장면이 촬영됨. 직원이 뒤늦게 알아채고 뒤쫓아 나가는 모습도 함께 담김.'}},
+    {icon:'🧾', name:'피해 품목 영수증 사본', desc:'빵과 우유, 합계 5,400원 상당', detail:{type:'forensic', title:'피해 품목 영수증 사본 (편의점 발행)', fields:[{label:'품목', value:'식빵 1개, 흰우유 1개'}, {label:'합계', value:'5,400원'}], conclusion:'해당 품목은 결제되지 않았으며, 매장 재고 시스템상으로도 무단 반출 처리됨.'}}
   ],
   en:{
     title:'Case 1. Theft',
@@ -1924,8 +1938,8 @@ const CASES = [
     },
     precedent:'In similar subsistence-driven theft cases, sentences typically range from a suspended sentence to a fine, or a short suspended prison term.',
     evidence:[
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant carrying items out'},
-      {icon:'🧾', name:'Copy of Item Receipt', desc:'Bread and milk, totaling about 5,400 won'}
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant carrying items out', detail:{type:'cctv', timestamp:'21:14 on the day of the incident — Convenience store interior CCTV', caption:'The defendant is seen taking bread and milk from the shelf and walking straight past the register to the door without paying. A clerk is seen noticing belatedly and chasing after them.'}},
+      {icon:'🧾', name:'Copy of Item Receipt', desc:'Bread and milk, totaling about 5,400 won', detail:{type:'forensic', title:'Copy of Item Receipt (issued by the store)', fields:[{label:'Items', value:'1 loaf of bread, 1 carton of milk'}, {label:'Total', value:'5,400 won'}], conclusion:'These items were never paid for, and the store\'s inventory system also logged them as an unauthorized removal.'}}
     ]
   }
 },
@@ -1953,8 +1967,8 @@ const CASES = [
   },
   precedent:'유사 사례는 애초에 기소 자체가 거의 이루어지지 않으며, 기소되더라도 대부분 무죄로 종결됩니다.',
   evidence:[
-    {icon:'👑', name:'목격자 진술서', desc:'"매일 아침 인사를 강요당했다"는 이웃 주민 진술'},
-    {icon:'📋', name:'피고인 자기소개 카드', desc:'"나는 이 나라의 공주다"라고 적힌 자필 카드'}
+    {icon:'👑', name:'목격자 진술서', desc:'"매일 아침 인사를 강요당했다"는 이웃 주민 진술', detail:{type:'forensic', title:'목격자 진술 조서 (이웃 주민 3인)', fields:[{label:'진술 요지', value:'"매일 아침 마주칠 때마다 인사를 받으라며 길을 막았다"'}, {label:'피해 정도', value:'금전적·신체적 피해 없음, 불쾌감 호소'}], conclusion:'진술자 전원이 강요나 협박은 없었으며 단지 반복적인 언행으로 인한 불편함을 호소함.'}},
+    {icon:'📋', name:'피고인 자기소개 카드', desc:'"나는 이 나라의 공주다"라고 적힌 자필 카드', detail:{type:'handwritten', text:'나는 이 나라의 공주다. 앞으로 나를 보면 정중히 인사할 것.', source:'피고인이 직접 만들어 놀이터 게시판에 붙인 자기소개 카드'}}
   ],
   en:{
     title:'Case 2. The Self-Proclaimed Princess Incident',
@@ -1976,8 +1990,8 @@ const CASES = [
     },
     precedent:'Similar cases are rarely prosecuted at all, and even when they are, they almost always end in acquittal.',
     evidence:[
-      {icon:'👑', name:"Witness Statement", desc:'A neighbor\'s statement claiming to have been "forced to greet her every morning"'},
-      {icon:'📋', name:"Defendant's Self-Introduction Card", desc:'A handwritten card reading "I am the princess of this nation"'}
+      {icon:'👑', name:"Witness Statement", desc:'A neighbor\'s statement claiming to have been "forced to greet her every morning"', detail:{type:'forensic', title:'Witness Statement Record (3 neighbors)', fields:[{label:'Summary', value:'"Every morning when we crossed paths, she blocked our way demanding a greeting."'}, {label:'Extent of harm', value:'No financial or physical harm; discomfort only'}], conclusion:'All witnesses stated there was no coercion or threat, only discomfort from repeated behavior.'}},
+      {icon:'📋', name:"Defendant's Self-Introduction Card", desc:'A handwritten card reading "I am the princess of this nation"', detail:{type:'handwritten', text:'I am the princess of this nation. From now on, greet me properly when you see me.', source:'A self-introduction card the defendant made and posted on the playground bulletin board'}}
     ]
   }
 },
@@ -2006,8 +2020,8 @@ const CASES = [
   },
   precedent:'유사한 폭행치상 사건은 합의 여부에 따라 벌금형부터 징역 1~2년의 집행유예까지 다양하게 선고됩니다.',
   evidence:[
-    {icon:'🩺', name:'상해진단서', desc:'전치 3주 진단'},
-    {icon:'💰', name:'공탁 확인서', desc:'치료비 전액 공탁 내역'}
+    {icon:'🩺', name:'상해진단서', desc:'전치 3주 진단', detail:{type:'forensic', title:'상해진단서 (병원 발행)', fields:[{label:'진단명', value:'안면부 타박상, 비골 골절 의증'}, {label:'치료 기간', value:'전치 3주'}], conclusion:'회식 자리에서의 물리적 충격에 부합하는 손상으로, 자연 발생 가능성은 낮다는 소견.'}},
+    {icon:'💰', name:'공탁 확인서', desc:'치료비 전액 공탁 내역', detail:{type:'forensic', title:'공탁 확인서 (법원 공탁소 발행)', fields:[{label:'공탁 금액', value:'치료비 및 위자료 전액'}, {label:'공탁 사유', value:'피해자가 합의를 거부하여 임의 공탁'}], conclusion:'피고인이 자력으로 치료비 전액을 공탁했으나, 피해자의 처벌 의사는 여전히 유효함.'}}
   ],
   en:{
     title:'Case 3. Assault Causing Injury',
@@ -2030,8 +2044,8 @@ const CASES = [
     },
     precedent:'Similar assault-injury cases are sentenced anywhere from a fine to a 1-2 year suspended prison term, depending on whether a settlement was reached.',
     evidence:[
-      {icon:'🩺', name:'Medical Certificate', desc:'Diagnosis of three weeks required for treatment'},
-      {icon:'💰', name:'Court Deposit Confirmation', desc:'Record of the full medical cost deposited with the court'}
+      {icon:'🩺', name:'Medical Certificate', desc:'Diagnosis of three weeks required for treatment', detail:{type:'forensic', title:'Medical Diagnosis Report (issued by hospital)', fields:[{label:'Diagnosis', value:'Facial contusion, suspected nasal fracture'}, {label:'Recovery period', value:'3 weeks'}], conclusion:'The injury is consistent with a physical blow sustained at the gathering; unlikely to have occurred naturally.'}},
+      {icon:'💰', name:'Court Deposit Confirmation', desc:'Record of the full medical cost deposited with the court', detail:{type:'forensic', title:'Court Deposit Confirmation (issued by the court deposit office)', fields:[{label:'Amount deposited', value:'Full medical costs and consolation money'}, {label:'Reason', value:'Deposited unilaterally after the victim refused to settle'}], conclusion:'The defendant deposited the full treatment cost at their own expense, but the victim\'s intent to press charges remains valid.'}}
     ]
   }
 },
@@ -2059,8 +2073,8 @@ const CASES = [
   },
   precedent:'이와 유사한 민원은 대부분 경찰 단계에서 훈방 조치되며, 기소 자체가 이례적입니다.',
   evidence:[
-    {icon:'👃', name:'민원 접수 기록', desc:'"소리가 너무 크다"는 다수의 민원'},
-    {icon:'🚇', name:'지하철 CCTV', desc:'특별한 이상 행동 없이 자리에 앉아있는 모습만 촬영됨'}
+    {icon:'👃', name:'민원 접수 기록', desc:'"소리가 너무 크다"는 다수의 민원', detail:{type:'forensic', title:'민원 접수 기록 (지하철공사·마트 관리사무소)', fields:[{label:'접수 건수', value:'총 7건'}, {label:'민원 내용', value:'"소리가 너무 크고 자주 발생한다"'}], conclusion:'민원은 전부 소음 자체에 대한 불쾌감 호소이며, 신체적 위해나 재산 피해를 주장한 사례는 없음.'}},
+    {icon:'🚇', name:'지하철 CCTV', desc:'특별한 이상 행동 없이 자리에 앉아있는 모습만 촬영됨', detail:{type:'cctv', timestamp:'민원 접수일 18:32 — 지하철 객차 내부 CCTV', caption:'피고인은 좌석에 조용히 앉아 있을 뿐, 특별한 이상 행동이나 타인에 대한 위협적 언동은 전혀 확인되지 않음.'}}
   ],
   en:{
     title:'Case 4. The Public Flatulence Incident',
@@ -2082,8 +2096,8 @@ const CASES = [
     },
     precedent:'Similar complaints are almost always resolved with a warning at the police stage; prosecution itself is highly unusual.',
     evidence:[
-      {icon:'👃', name:'Complaint Records', desc:'Numerous complaints that "the noise is too loud"'},
-      {icon:'🚇', name:'Subway CCTV', desc:'Shows the defendant simply seated, with no unusual behavior of any kind'}
+      {icon:'👃', name:'Complaint Records', desc:'Numerous complaints that "the noise is too loud"', detail:{type:'forensic', title:'Complaint Log (subway authority / mart management office)', fields:[{label:'Number of complaints', value:'7 total'}, {label:'Content', value:'"It\'s far too loud and happens often."'}], conclusion:'All complaints concern discomfort from the noise itself; none allege physical harm or property damage.'}},
+      {icon:'🚇', name:'Subway CCTV', desc:'Shows the defendant simply seated, with no unusual behavior of any kind', detail:{type:'cctv', timestamp:'18:32 on the day a complaint was filed — Subway car interior CCTV', caption:'The defendant is simply seated quietly; no unusual behavior or threatening conduct toward others is observed at all.'}}
     ]
   }
 },
@@ -2113,8 +2127,8 @@ const CASES = [
   },
   precedent:'다수 피해자를 발생시킨 보이스피싱 가담 사건은 가담 정도에 따라 징역 3~10년형이 선고되는 경향이 있습니다.',
   evidence:[
-    {icon:'📞', name:'통화 녹취록', desc:'조직의 지시 정황이 담긴 통화 내용'},
-    {icon:'🏦', name:'계좌 거래내역', desc:'수수료 명목 입금 내역'}
+    {icon:'📞', name:'통화 녹취록', desc:'조직의 지시 정황이 담긴 통화 내용', detail:{type:'forensic', title:'통화 녹취록 (조직 상선과의 통화)', fields:[{label:'통화 일시', value:'범행 당일 오전'}, {label:'주요 내용', value:'"3번째 계좌에서 현금 인출해서 지정 장소로 가져와"라는 지시'}], conclusion:'피고인이 조직의 지시에 따라 움직였음을 뒷받침하는 정황이나, 조직 구조에 대한 인식 수준은 불명확함.'}},
+    {icon:'🏦', name:'계좌 거래내역', desc:'수수료 명목 입금 내역', detail:{type:'forensic', title:'계좌 거래내역 조회 회신서', fields:[{label:'입금 항목', value:'"수고비" 명목 총 6회, 회당 30~50만원'}, {label:'입금자', value:'대포통장 명의인 (신원 미상)'}], conclusion:'인출 즉시 현금화하여 전달한 정황이 계좌 흐름상 반복적으로 확인됨.'}}
   ],
   en:{
     title:'Case 5. Participation in a Voice-Phishing Ring',
@@ -2138,8 +2152,8 @@ const CASES = [
     },
     precedent:'Voice-phishing participation cases involving multiple victims tend to result in sentences of 3 to 10 years of imprisonment, depending on the degree of involvement.',
     evidence:[
-      {icon:'📞', name:'Call Recording Transcript', desc:'Call contents showing the defendant taking direction from the organization'},
-      {icon:'🏦', name:'Account Transaction History', desc:'Deposits recorded as "commission" payments'}
+      {icon:'📞', name:'Call Recording Transcript', desc:'Call contents showing the defendant taking direction from the organization', detail:{type:'forensic', title:'Call Transcript (call with the ring leader)', fields:[{label:'Time', value:'Morning of the offense'}, {label:'Key content', value:'An instruction to "withdraw cash from account No. 3 and bring it to the designated spot"'}], conclusion:'Supports that the defendant acted on the organization\'s instructions, though their awareness of its full structure remains unclear.'}},
+      {icon:'🏦', name:'Account Transaction History', desc:'Deposits recorded as "commission" payments', detail:{type:'forensic', title:'Bank Transaction Record (response to inquiry)', fields:[{label:'Deposits', value:'6 deposits labeled "service fee," 300,000-500,000 won each'}, {label:'Depositor', value:'Holder of a borrowed-name account (identity unknown)'}], conclusion:'The transaction flow repeatedly shows cash being withdrawn and handed over immediately after each deposit.'}}
     ]
   }
 },
@@ -2241,8 +2255,8 @@ const CASES = [
   },
   precedent:'단순 소음·불쾌감 수준의 행위는 업무방해죄 성립이 부정되는 경우가 많습니다.',
   evidence:[
-    {icon:'🎭', name:'목격자 영상', desc:'피고인이 사극 대사를 낭독하는 모습'},
-    {icon:'🚈', name:'철도공사 지연 사유서', desc:'"신호 점검으로 인한 정차"라고 명시됨'}
+    {icon:'🎭', name:'목격자 영상', desc:'피고인이 사극 대사를 낭독하는 모습', detail:{type:'cctv', timestamp:'민원 접수일 08:47 — 지하철 객차 내부 CCTV', caption:'피고인이 큰 목소리로 사극 대사("네 이놈, 게 섰거라!")를 낭독하는 모습이 촬영됨. 주변 승객 몇몇이 놀라거나 자리를 옮기는 모습도 함께 담김.'}},
+    {icon:'🚈', name:'철도공사 지연 사유서', desc:'"신호 점검으로 인한 정차"라고 명시됨', detail:{type:'forensic', title:'철도공사 열차 지연 사유서', fields:[{label:'지연 시간', value:'3분'}, {label:'공식 사유', value:'전동차 신호 점검으로 인한 일시 정차'}], conclusion:'지연 사유는 피고인의 행위와 무관한 신호 계통 점검으로, 공식 기록상 명확히 구분되어 있음.'}}
   ],
   en:{
     title:'Case 7. The One-Man Historical Drama Reading on the Subway',
@@ -2264,8 +2278,8 @@ const CASES = [
     },
     precedent:'Conduct amounting to mere noise or discomfort is often found not to meet the elements of obstruction of business.',
     evidence:[
-      {icon:'🎭', name:"Witness Video", desc:'Footage of the defendant reciting historical-drama lines'},
-      {icon:'🚈', name:'Railway Corporation Delay Report', desc:'States "stopped for signal inspection"'}
+      {icon:'🎭', name:"Witness Video", desc:'Footage of the defendant reciting historical-drama lines', detail:{type:'cctv', timestamp:'08:47 on the day a complaint was filed — Subway car interior CCTV', caption:'The defendant is seen loudly reciting historical-drama lines ("Halt, you scoundrel!"). Several nearby passengers appear startled or move to another seat.'}},
+      {icon:'🚈', name:'Railway Corporation Delay Report', desc:'States "stopped for signal inspection"', detail:{type:'forensic', title:'Railway Corporation Delay Report', fields:[{label:'Delay duration', value:'3 minutes'}, {label:'Official cause', value:'Temporary stop for signal inspection'}], conclusion:'The delay\'s official cause is unrelated to the defendant\'s conduct and is clearly recorded as a signal-system inspection.'}}
     ]
   }
 },
@@ -2377,8 +2391,8 @@ const CASES = [
   },
   precedent:'공직자 뇌물수수 사건은 수수액과 직위에 따라 집행유예부터 징역 10년 이상까지 편차가 큽니다.',
   evidence:[
-    {icon:'🏦', name:'계좌 추적 자료', desc:'인허가 처리 직후 5천만원 입금 확인'},
-    {icon:'📝', name:'채무 변제 약정서', desc:'사건 이후 뒤늦게 작성된 정황'}
+    {icon:'🏦', name:'계좌 추적 자료', desc:'인허가 처리 직후 5천만원 입금 확인', detail:{type:'forensic', title:'계좌 추적 자료 (금융정보분석원 회신)', fields:[{label:'입금액', value:'5,000만원'}, {label:'입금 시점', value:'인허가 승인 처리 다음 날'}], conclusion:'통상적인 처리 기간보다 현저히 빠르게 승인이 이루어진 직후 거액이 입금되어, 대가성이 강하게 의심됨.'}},
+    {icon:'📝', name:'채무 변제 약정서', desc:'사건 이후 뒤늦게 작성된 정황', detail:{type:'handwritten', text:'본인은 위 금원 5,000만원을 채무 변제 명목으로 수령하였음을 확인함.', source:'입금 3주 후, 수사가 개시되자 뒤늦게 작성된 것으로 확인된 채무 변제 약정서'}}
   ],
   en:{
     title:'Case 9. Bribery by a Public Official',
@@ -2402,8 +2416,8 @@ const CASES = [
     },
     precedent:'Bribery cases involving public officials vary widely, from suspended sentences to more than 10 years of imprisonment, depending on the amount and the position held.',
     evidence:[
-      {icon:'🏦', name:'Account Tracing Records', desc:'Confirms a 50-million-won deposit immediately after the licensing matter was processed'},
-      {icon:'📝', name:'Debt Repayment Agreement', desc:'Indications it was drafted belatedly, after the incident'}
+      {icon:'🏦', name:'Account Tracing Records', desc:'Confirms a 50-million-won deposit immediately after the licensing matter was processed', detail:{type:'forensic', title:'Bank Account Trace (Financial Intelligence Unit response)', fields:[{label:'Amount deposited', value:'50,000,000 won'}, {label:'Timing', value:'The day after the permit was approved'}], conclusion:'The approval was processed unusually fast, followed immediately by a large deposit, strongly suggesting a quid pro quo.'}},
+      {icon:'📝', name:'Debt Repayment Agreement', desc:'Indications it was drafted belatedly, after the incident', detail:{type:'handwritten', text:'I hereby confirm receipt of the above 50,000,000 won as repayment of a debt.', source:'A debt-repayment agreement found to have been drafted belatedly, 3 weeks after the deposit, once the investigation began'}}
     ]
   }
 },
@@ -2435,8 +2449,8 @@ const CASES = [
   },
   precedent:'유사한 집단폭행치사 사건은 가담 정도에 따라 징역 4~12년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'현장 CCTV', desc:'집단폭행 장면이 촬영됨'},
-    {icon:'🧬', name:'부검 결과서', desc:'다수 가격에 의한 치명상 확인'}
+    {icon:'📹', name:'현장 CCTV', desc:'집단폭행 장면이 촬영됨', detail:{type:'cctv', timestamp:'사건 당일 23:52 — 유흥가 골목 CCTV', caption:'피고인을 포함한 무리 5~6명이 쓰러진 피해자를 둘러싸고 번갈아 가격하는 장면이 3분 넘게 촬영됨. 피해자가 움직이지 않게 된 뒤에도 폭행이 한동안 계속됨.'}},
+    {icon:'🧬', name:'부검 결과서', desc:'다수 가격에 의한 치명상 확인', detail:{type:'forensic', title:'국립과학수사연구원 부검 결과서', fields:[{label:'사인', value:'다발성 둔기 손상에 의한 외상성 뇌출혈'}, {label:'손상 부위', value:'두부, 흉부 등 전신에 걸친 다수의 타박상'}], conclusion:'손상 패턴상 한 사람이 아닌 여러 명이 각기 다른 방향에서 가격한 것으로 추정됨.'}}
   ],
   en:{
     title:'Case 10. Citizen Participatory Trial - Fatal Group Assault',
@@ -2460,8 +2474,8 @@ const CASES = [
     },
     precedent:'Similar fatal group-assault cases are often sentenced to between 4 and 12 years of imprisonment, depending on the degree of participation.',
     evidence:[
-      {icon:'📹', name:'On-Scene CCTV', desc:'Footage capturing the group assault'},
-      {icon:'🧬', name:'Autopsy Report', desc:'Confirms a fatal injury caused by multiple blows'}
+      {icon:'📹', name:'On-Scene CCTV', desc:'Footage capturing the group assault', detail:{type:'cctv', timestamp:'23:52 on the day of the incident — Entertainment district alley CCTV', caption:'A group of five to six, including the defendant, is seen surrounding the fallen victim and taking turns striking them for over three minutes. The beating continues for a time even after the victim stops moving.'}},
+      {icon:'🧬', name:'Autopsy Report', desc:'Confirms a fatal injury caused by multiple blows', detail:{type:'forensic', title:'National Forensic Service Autopsy Report', fields:[{label:'Cause of death', value:'Traumatic cerebral hemorrhage from multiple blunt-force injuries'}, {label:'Injury sites', value:'Numerous contusions across the head, chest, and body'}], conclusion:'The injury pattern suggests blows struck from multiple directions by more than one person, not a single assailant.'}}
     ]
   }
 },
@@ -2490,8 +2504,8 @@ const CASES = [
   },
   precedent:'모의·지휘 가담자는 통상 5년 이상의 중형이 선고되며, 가담 정도가 낮을수록 하한에 가깝게 정해지는 경향이 있습니다.',
   evidence:[
-    {icon:'📱', name:'통신 기록', desc:'실행 계획을 지시하는 대화 내용'},
-    {icon:'🗣️', name:'관계자 진술', desc:'모의 및 지휘 정황에 대한 진술'}
+    {icon:'📱', name:'통신 기록', desc:'실행 계획을 지시하는 대화 내용', detail:{type:'forensic', title:'통신 기록 (조직 내 지시 계통 대화)', fields:[{label:'대화 시점', value:'거사 예정일 사흘 전'}, {label:'주요 내용', value:'"본대는 정문, 2조는 후문으로 진입해 통제한다"는 구체적 실행 지시'}], conclusion:'단순 의견 교환이 아닌, 역할 분담과 진입 경로까지 명시된 구체적 실행 계획으로 확인됨.'}},
+    {icon:'🗣️', name:'관계자 진술', desc:'모의 및 지휘 정황에 대한 진술', detail:{type:'forensic', title:'관계자 진술 조서 (가담자 2인)', fields:[{label:'진술 요지', value:'"피고인이 회의를 주재하며 각 조의 임무를 직접 배정했다"'}], conclusion:'두 진술자 모두 피고인을 모의 단계부터 지휘 계통의 핵심으로 지목함.'}}
   ],
   en:{
     title:'Case 11. Insurrection',
@@ -2513,8 +2527,8 @@ const CASES = [
     },
     precedent:'Those who plot or direct such offenses are typically sentenced to at least 5 years, with sentences tending toward the minimum where the degree of involvement is lower.',
     evidence:[
-      {icon:'📱', name:'Communication Records', desc:'Conversations directing the execution plan'},
-      {icon:'🗣️', name:"Statements From Those Involved", desc:'Statements regarding the plotting and directing'}
+      {icon:'📱', name:'Communication Records', desc:'Conversations directing the execution plan', detail:{type:'forensic', title:'Communication Records (internal chain-of-command conversation)', fields:[{label:'Timing', value:'Three days before the planned action'}, {label:'Key content', value:'A specific operational order: "The main unit enters through the front gate, unit 2 secures the rear"'}], conclusion:'Confirmed to be a concrete execution plan with assigned roles and entry routes, not a mere exchange of opinions.'}},
+      {icon:'🗣️', name:"Statements From Those Involved", desc:'Statements regarding the plotting and directing', detail:{type:'forensic', title:'Statements From Those Involved (2 participants)', fields:[{label:'Summary', value:'"The defendant chaired the meeting and personally assigned each unit\'s task."'}], conclusion:'Both witnesses identify the defendant as central to the chain of command from the planning stage onward.'}}
     ]
   }
 },
@@ -2620,8 +2634,8 @@ const CASES = [
   },
   precedent:'흉기 휴대 특수강간은 통상 징역 7~15년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🔪', name:'압수된 흉기', desc:'현장에서 발견되어 압수됨'},
-    {icon:'📹', name:'CCTV 영상', desc:'흉기를 꺼내는 장면이 촬영됨'}
+    {icon:'🔪', name:'압수된 흉기', desc:'현장에서 발견되어 압수됨', detail:{type:'forensic', title:'압수된 흉기 감정 결과', fields:[{label:'품목', value:'등산용 칼(전장 22cm)'}, {label:'압수 장소', value:'피고인 자택 신발장'}], conclusion:'피해자 진술 속 흉기 형태와 일치하며, 손잡이 부분에서 피고인 지문이 검출됨.'}},
+    {icon:'📹', name:'CCTV 영상', desc:'흉기를 꺼내는 장면이 촬영됨', detail:{type:'cctv', timestamp:'사건 당일 22:10 — 원룸 건물 복도 CCTV', caption:'피고인이 피해자를 뒤따라가며 품에서 흉기를 꺼내 보이는 장면이 촬영됨. 이후 피해자가 저항을 멈추고 순순히 문을 열어주는 모습이 이어짐.'}}
   ],
   en:{
     title:'Case 13. Aggravated Rape',
@@ -2643,8 +2657,8 @@ const CASES = [
     },
     precedent:'Aggravated rape involving a weapon is typically sentenced to between 7 and 15 years of imprisonment.',
     evidence:[
-      {icon:'🔪', name:'Seized Weapon', desc:'Found and seized at the scene'},
-      {icon:'📹', name:'CCTV Footage', desc:'Captures the weapon being taken out'}
+      {icon:'🔪', name:'Seized Weapon', desc:'Found and seized at the scene', detail:{type:'forensic', title:'Seized Weapon Analysis', fields:[{label:'Item', value:'Hiking knife, 22cm blade'}, {label:'Seized from', value:'Shoe cabinet at the defendant\'s home'}], conclusion:'Matches the shape of the weapon described in the victim\'s statement, and the defendant\'s fingerprints were found on the handle.'}},
+      {icon:'📹', name:'CCTV Footage', desc:'Captures the weapon being taken out', detail:{type:'cctv', timestamp:'22:10 on the day of the incident — Studio apartment hallway CCTV', caption:'The defendant is seen following the victim and drawing the weapon from their clothing. The victim then stops resisting and opens the door.'}}
     ]
   }
 },
@@ -2672,8 +2686,8 @@ const CASES = [
   },
   precedent:'유사강간죄는 통상 징역 2~6년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📷', name:'신체 손상 사진', desc:'사건 직후 촬영된 신체 손상 기록'},
-    {icon:'🗣️', name:'피해자 진술', desc:'사건 경위에 대한 구체적 진술'}
+    {icon:'📷', name:'신체 손상 사진', desc:'사건 직후 촬영된 신체 손상 기록', detail:{type:'forensic', title:'신체 손상 사진 감정 소견 (응급실 촬영)', fields:[{label:'촬영 시점', value:'사건 발생 직후'}, {label:'소견', value:'팔·다리에 남은 저항흔 다수, 방어 과정에서 발생한 것으로 판단'}], conclusion:'손상 형태가 우발적 접촉보다는 강한 물리적 제압 과정에서 발생했을 가능성이 높다는 소견.'}},
+    {icon:'🗣️', name:'피해자 진술', desc:'사건 경위에 대한 구체적 진술', detail:{type:'forensic', title:'피해자 진술 조서', fields:[{label:'진술 태도', value:'사건 경위를 시간 순서대로 구체적으로 진술'}, {label:'특기 사항', value:'가해자의 인상착의 및 발언 내용까지 상세히 기억'}], conclusion:'진술의 구체성과 일관성이 높아 신빙성이 인정된다는 평가.'}}
   ],
   en:{
     title:'Case 14. Quasi-Rape (Sexual Assault by Insertion)',
@@ -2695,8 +2709,8 @@ const CASES = [
     },
     precedent:'This offense is typically sentenced to between 2 and 6 years of imprisonment.',
     evidence:[
-      {icon:'📷', name:'Photos of Physical Injury', desc:'A record of injury photographed immediately after the incident'},
-      {icon:'🗣️', name:"Victim's Statement", desc:'A specific statement regarding the circumstances of the incident'}
+      {icon:'📷', name:'Photos of Physical Injury', desc:'A record of injury photographed immediately after the incident', detail:{type:'forensic', title:'Physical Injury Photo Assessment (taken in the ER)', fields:[{label:'Taken', value:'Immediately after the incident'}, {label:'Findings', value:'Multiple defensive marks on the arms and legs, consistent with resistance'}], conclusion:'The injury pattern is more consistent with forceful physical restraint than incidental contact.'}},
+      {icon:'🗣️', name:"Victim's Statement", desc:'A specific statement regarding the circumstances of the incident', detail:{type:'forensic', title:'Victim\'s Statement Record', fields:[{label:'Demeanor', value:'Gave a specific, chronological account of events'}, {label:'Note', value:'Recalled even the assailant\'s appearance and words in detail'}], conclusion:'The specificity and consistency of the statement support its credibility.'}}
     ]
   }
 },
@@ -2724,8 +2738,8 @@ const CASES = [
   },
   precedent:'준강간죄는 강간죄와 유사하게 통상 징역 3~7년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🍶', name:'혈중알코올농도 기록', desc:'사건 당시 피해자의 만취 상태 확인'},
-    {icon:'🗣️', name:'목격자 진술', desc:'피해자의 상태에 대한 주변인 진술'}
+    {icon:'🍶', name:'혈중알코올농도 기록', desc:'사건 당시 피해자의 만취 상태 확인', detail:{type:'forensic', title:'혈중알코올농도 감정 결과 (병원 채혈)', fields:[{label:'측정 수치', value:'0.25%'}, {label:'측정 시점', value:'사건 발생 약 1시간 후'}], conclusion:'해당 수치는 의식이 있어도 스스로 몸을 가누거나 저항하기 극히 어려운 만취 상태에 해당함.'}},
+    {icon:'🗣️', name:'목격자 진술', desc:'피해자의 상태에 대한 주변인 진술', detail:{type:'forensic', title:'목격자 진술 조서 (동석자)', fields:[{label:'진술 요지', value:'"피해자는 부축을 받아야 걸을 수 있는 상태였고, 말도 제대로 잇지 못했다"'}], conclusion:'피해자가 사건 당시 스스로 의사 표현이나 저항이 불가능한 상태였음을 뒷받침함.'}}
   ],
   en:{
     title:'Case 15. Quasi-Rape (Exploiting Incapacitation)',
@@ -2747,8 +2761,8 @@ const CASES = [
     },
     precedent:'Similar to rape, this offense is typically sentenced to between 3 and 7 years of imprisonment.',
     evidence:[
-      {icon:'🍶', name:'Blood Alcohol Content Record', desc:"Confirms the victim's heavily intoxicated state at the time"},
-      {icon:'🗣️', name:'Witness Statements', desc:"Statements from those nearby regarding the victim's condition"}
+      {icon:'🍶', name:'Blood Alcohol Content Record', desc:"Confirms the victim's heavily intoxicated state at the time", detail:{type:'forensic', title:'Blood Alcohol Concentration Report (hospital blood draw)', fields:[{label:'Reading', value:'0.25%'}, {label:'Time of test', value:'About 1 hour after the incident'}], conclusion:'This level makes it extremely difficult to control one\'s body or resist even while conscious.'}},
+      {icon:'🗣️', name:'Witness Statements', desc:"Statements from those nearby regarding the victim's condition", detail:{type:'forensic', title:'Witness Statement Record (companion present)', fields:[{label:'Summary', value:'"The victim needed to be supported to walk and could barely speak."'}], conclusion:'Supports that the victim was physically incapable of consent or resistance at the time.'}}
     ]
   }
 },
@@ -2778,8 +2792,8 @@ const CASES = [
   },
   precedent:'현주건조물방화죄는 인명 피해 여부에 따라 통상 징역 3~10년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🔥', name:'화재 감식 결과서', desc:'인화물질 사용 정황 확인'},
-    {icon:'📹', name:'CCTV 영상', desc:'사건 직전 현장 주변 배회 장면'}
+    {icon:'🔥', name:'화재 감식 결과서', desc:'인화물질 사용 정황 확인', detail:{type:'forensic', title:'화재 감식 결과서 (소방당국 발행)', fields:[{label:'발화 지점', value:'주택 현관 앞 신발장 인근'}, {label:'감식 소견', value:'휘발유 성분 검출, 인위적 발화 정황 확인'}], conclusion:'누전이나 실화 등 자연 발화 가능성은 배제되었으며, 인화물질을 이용한 고의 방화로 판단됨.'}},
+    {icon:'📹', name:'CCTV 영상', desc:'사건 직전 현장 주변 배회 장면', detail:{type:'cctv', timestamp:'화재 발생 40분 전 — 주택 인근 골목 CCTV', caption:'피고인이 라이터와 페트병을 든 채 주택 주변을 서성이다 현관 쪽으로 다가가는 모습이 촬영됨.'}}
   ],
   en:{
     title:'Case 16. Arson of an Inhabited Structure',
@@ -2801,8 +2815,8 @@ const CASES = [
     },
     precedent:'This offense is typically sentenced to between 3 and 10 years of imprisonment, depending on whether there was loss of life.',
     evidence:[
-      {icon:'🔥', name:'Fire Forensic Report', desc:'Confirms use of an accelerant'},
-      {icon:'📹', name:'CCTV Footage', desc:'Shows loitering near the scene shortly before the incident'}
+      {icon:'🔥', name:'Fire Forensic Report', desc:'Confirms use of an accelerant', detail:{type:'forensic', title:'Fire Investigation Report (issued by fire authorities)', fields:[{label:'Point of origin', value:'Near the shoe cabinet by the front door'}, {label:'Findings', value:'Gasoline residue detected; consistent with deliberate ignition'}], conclusion:'Accidental causes such as electrical faults were ruled out; determined to be intentional arson using an accelerant.'}},
+      {icon:'📹', name:'CCTV Footage', desc:'Shows loitering near the scene shortly before the incident', detail:{type:'cctv', timestamp:'40 minutes before the fire — Alley near the house, CCTV', caption:'The defendant is seen loitering near the house holding a lighter and a plastic bottle, then approaching the front door.'}}
     ]
   }
 },
@@ -2831,8 +2845,8 @@ const CASES = [
   },
   precedent:'단순 강도죄는 폭행의 정도와 피해 회복 여부에 따라 통상 징역 3~6년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'CCTV 영상', desc:'피해자를 밀치고 금품을 가져가는 장면'},
-    {icon:'👛', name:'피해품 회수 기록', desc:'피고인 소지품에서 발견된 지갑과 현금'}
+    {icon:'📹', name:'CCTV 영상', desc:'피해자를 밀치고 금품을 가져가는 장면', detail:{type:'cctv', timestamp:'사건 당일 22:40 — 골목 인근 상가 CCTV', caption:'피고인이 지나가던 피해자를 밀쳐 넘어뜨린 뒤 가방을 낚아채 달아나는 장면이 그대로 촬영됨.'}},
+    {icon:'👛', name:'피해품 회수 기록', desc:'피고인 소지품에서 발견된 지갑과 현금', detail:{type:'forensic', title:'피해품 회수 및 압수 조서', fields:[{label:'회수 품목', value:'피해자 명의 지갑, 현금 23만원'}, {label:'발견 장소', value:'피고인의 재킷 안주머니'}], conclusion:'피해품이 범행 직후 체포된 피고인의 소지품에서 그대로 발견됨.'}}
   ],
   en:{
     title:'Case 17. Robbery',
@@ -2854,8 +2868,8 @@ const CASES = [
     },
     precedent:'Simple robbery is typically sentenced to between 3 and 6 years of imprisonment, depending on the degree of force used and whether the harm was remedied.',
     evidence:[
-      {icon:'📹', name:'CCTV Footage', desc:'Shows shoving the victim and taking their belongings'},
-      {icon:'👛', name:'Recovered Property Record', desc:"The wallet and cash found among the defendant's belongings"}
+      {icon:'📹', name:'CCTV Footage', desc:'Shows shoving the victim and taking their belongings', detail:{type:'cctv', timestamp:'22:40 on the day of the incident — CCTV at a nearby shop', caption:'The defendant is seen shoving the passing victim to the ground, snatching their bag, and fleeing.'}},
+      {icon:'👛', name:'Recovered Property Record', desc:"The wallet and cash found among the defendant's belongings", detail:{type:'forensic', title:'Recovered Property Report', fields:[{label:'Items recovered', value:'Victim\'s wallet, 230,000 won in cash'}, {label:'Found on', value:'Inside the defendant\'s jacket pocket'}], conclusion:'The stolen property was found intact on the defendant\'s person immediately after arrest.'}}
     ]
   }
 },
@@ -2884,8 +2898,8 @@ const CASES = [
   },
   precedent:'야간 주거침입 특수강도는 통상 징역 5~10년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🚪', name:'침입 흔적 감식', desc:'창문 파손 등 침입 경로 확인'},
-    {icon:'📹', name:'CCTV 영상', desc:'심야 시간대 침입 장면'}
+    {icon:'🚪', name:'침입 흔적 감식', desc:'창문 파손 등 침입 경로 확인', detail:{type:'forensic', title:'침입 흔적 현장 감식 결과', fields:[{label:'침입 경로', value:'1층 뒷베란다 창문'}, {label:'감식 소견', value:'창틀 잠금장치 부분에 공구로 힘을 가한 흔적 확인'}], conclusion:'외부에서 강제로 개방한 물리적 흔적이 명확하며, 실수로 열려 있었을 가능성은 배제됨.'}},
+    {icon:'📹', name:'CCTV 영상', desc:'심야 시간대 침입 장면', detail:{type:'cctv', timestamp:'사건 당일 03:12 — 주택가 골목 CCTV', caption:'피고인이 장갑을 낀 채 해당 주택의 베란다 쪽으로 접근해 창문을 여는 장면이 촬영됨.'}}
   ],
   en:{
     title:'Case 18. Aggravated Robbery',
@@ -2907,8 +2921,8 @@ const CASES = [
     },
     precedent:'Aggravated robbery involving nighttime home invasion is typically sentenced to between 5 and 10 years of imprisonment.',
     evidence:[
-      {icon:'🚪', name:'Forced-Entry Forensics', desc:'Confirms the point of entry, such as a broken window'},
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the break-in occurring late at night'}
+      {icon:'🚪', name:'Forced-Entry Forensics', desc:'Confirms the point of entry, such as a broken window', detail:{type:'forensic', title:'Forensic Report on Point of Entry', fields:[{label:'Entry point', value:'First-floor rear veranda window'}, {label:'Findings', value:'Tool marks found on the window latch, consistent with forced entry'}], conclusion:'Clear physical evidence of forced entry from outside; the possibility it was accidentally left open is ruled out.'}},
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the break-in occurring late at night', detail:{type:'cctv', timestamp:'03:12 on the day of the incident — Residential alley CCTV', caption:'The defendant, wearing gloves, is seen approaching the veranda and opening the window.'}}
     ]
   }
 },
@@ -2938,8 +2952,8 @@ const CASES = [
   },
   precedent:'강도살인죄는 법정형이 사형 또는 무기징역으로 한정되어 있어, 재판부는 이 두 가지 중에서만 선택합니다.',
   evidence:[
-    {icon:'🧬', name:'DNA 증거', desc:'피고인의 DNA가 현장에서 검출됨'},
-    {icon:'📹', name:'CCTV 영상', desc:'금품을 챙겨 떠나는 장면이 촬영됨'}
+    {icon:'🧬', name:'DNA 증거', desc:'피고인의 DNA가 현장에서 검출됨', detail:{type:'forensic', title:'국립과학수사연구원 DNA 감정서', fields:[{label:'감정물', value:'현장에서 발견된 혈흔 및 모발'}, {label:'대조 결과', value:'피고인의 DNA 프로파일과 전부 일치'}], conclusion:'현장에 남겨진 생물학적 증거가 피고인의 것으로 확인되어, 범행 현장에 있었음이 뒷받침됨.'}},
+    {icon:'📹', name:'CCTV 영상', desc:'금품을 챙겨 떠나는 장면이 촬영됨', detail:{type:'cctv', timestamp:'사건 당일 01:20 — 상가 뒷골목 CCTV', caption:'피고인이 피해자의 가방을 챙겨 현장을 빠르게 벗어나는 장면이 촬영됨. 피해자는 이미 바닥에 쓰러진 채 움직이지 않는 상태였음.'}}
   ],
   en:{
     title:'Case 19. Robbery Resulting in Murder',
@@ -2961,8 +2975,8 @@ const CASES = [
     },
     precedent:'Because the statutory penalty for robbery resulting in murder is limited to death or life imprisonment, the court selects only between these two.',
     evidence:[
-      {icon:'🧬', name:'DNA Evidence', desc:"The defendant's DNA was detected at the scene"},
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant leaving with the stolen property'}
+      {icon:'🧬', name:'DNA Evidence', desc:"The defendant's DNA was detected at the scene", detail:{type:'forensic', title:'National Forensic Service DNA Report', fields:[{label:'Sample', value:'Blood and hair found at the scene'}, {label:'Match result', value:'Fully matches the defendant\'s DNA profile'}], conclusion:'Biological evidence left at the scene is confirmed to belong to the defendant, placing them at the scene of the crime.'}},
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant leaving with the stolen property', detail:{type:'cctv', timestamp:'01:20 on the day of the incident — Alley behind a shop, CCTV', caption:'The defendant is seen grabbing the victim\'s bag and quickly leaving the scene. The victim was already lying motionless on the ground.'}}
     ]
   }
 },
@@ -2992,8 +3006,8 @@ const CASES = [
   },
   precedent:'존속살해는 가중처벌되는 죄이나, 피해자의 상습적 학대 등 정상이 인정되면 하한에 가깝게 선고되는 경우도 있습니다.',
   evidence:[
-    {icon:'🩹', name:'상습 학대 진단 기록', desc:'수년간 누적된 상해 진단 기록'},
-    {icon:'🔪', name:'흉기 감식 결과', desc:'사전 준비 정황 확인'}
+    {icon:'🩹', name:'상습 학대 진단 기록', desc:'수년간 누적된 상해 진단 기록', detail:{type:'forensic', title:'상습 학대 진단 기록 (수년간의 병원 기록 종합)', fields:[{label:'진단 횟수', value:'최근 5년간 11회'}, {label:'진단명', value:'타박상, 열상, 골절 등 반복적 외상'}], conclusion:'상해 부위와 시기가 각기 다르며, 반복적·지속적인 폭력에 의한 것으로 판단됨.'}},
+    {icon:'🔪', name:'흉기 감식 결과', desc:'사전 준비 정황 확인', detail:{type:'forensic', title:'흉기 감정 결과 (범행 도구)', fields:[{label:'품목', value:'과도'}, {label:'구입 시점', value:'범행 사흘 전, 신용카드로 구매'}], conclusion:'평소 집에 있던 물건이 아닌 범행에 임박해 별도로 구입한 것으로 확인되어, 사전 계획성이 인정됨.'}}
   ],
   en:{
     title:'Case 20. Patricide/Matricide (Killing a Lineal Ascendant)',
@@ -3015,8 +3029,8 @@ const CASES = [
     },
     precedent:'While this offense carries an aggravated penalty, sentences closer to the statutory minimum are sometimes given where circumstances such as the victim\'s habitual abuse are recognized.',
     evidence:[
-      {icon:'🩹', name:'Chronic Abuse Medical Records', desc:'Records of injuries diagnosed over several years'},
-      {icon:'🔪', name:'Weapon Forensic Results', desc:'Confirms evidence of advance preparation'}
+      {icon:'🩹', name:'Chronic Abuse Medical Records', desc:'Records of injuries diagnosed over several years', detail:{type:'forensic', title:'Chronic Abuse Medical Record (compiled from years of hospital records)', fields:[{label:'Number of diagnoses', value:'11 over the past 5 years'}, {label:'Diagnoses', value:'Recurring trauma including bruises, lacerations, and fractures'}], conclusion:'The injuries vary in location and timing, consistent with repeated, ongoing violence.'}},
+      {icon:'🔪', name:'Weapon Forensic Results', desc:'Confirms evidence of advance preparation', detail:{type:'forensic', title:'Weapon Analysis (instrument of the crime)', fields:[{label:'Item', value:'A paring knife'}, {label:'Purchased', value:'Three days before the offense, by credit card'}], conclusion:'Confirmed to have been purchased specifically ahead of the offense rather than being a household item already on hand, supporting premeditation.'}}
     ]
   }
 },
@@ -3047,8 +3061,8 @@ const CASES = [
   },
   precedent:'유사 사건은 유출 정보의 등급과 피해 규모에 따라 통상 징역 3~10년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📡', name:'통신 기록', desc:'외국 정보기관과의 접촉 정황'},
-    {icon:'💰', name:'계좌 추적 자료', desc:'대가성 금전 거래 내역'}
+    {icon:'📡', name:'통신 기록', desc:'외국 정보기관과의 접촉 정황', detail:{type:'forensic', title:'통신 기록 조회 회신서', fields:[{label:'접촉 대상', value:'해외 소재 정보기관 관련 인물'}, {label:'통신 방식', value:'암호화된 메신저 애플리케이션'}], conclusion:'수개월에 걸쳐 정기적으로 접촉한 정황이 확인되며, 접촉 시점이 국가기관 자료 유출 시점과 일치함.'}},
+    {icon:'💰', name:'계좌 추적 자료', desc:'대가성 금전 거래 내역', detail:{type:'forensic', title:'계좌 추적 자료 (해외 송금 내역)', fields:[{label:'입금 경로', value:'제3국 경유 해외 송금'}, {label:'총액', value:'약 8천만원 상당'}], conclusion:'정상적인 소득으로 설명되지 않는 거액이 해외로부터 여러 차례에 걸쳐 입금됨.'}}
   ],
   en:{
     title:'Case 21. Leaking State Secrets (Espionage)',
@@ -3071,8 +3085,8 @@ const CASES = [
     },
     precedent:'Similar cases are typically sentenced to between 3 and 10 years of imprisonment, depending on the classification level of the leaked information and the scale of harm.',
     evidence:[
-      {icon:'📡', name:'Communication Records', desc:'Evidence of contact with a foreign intelligence agency'},
-      {icon:'💰', name:'Account Tracing Records', desc:'Records of financial transactions in exchange for information'}
+      {icon:'📡', name:'Communication Records', desc:'Evidence of contact with a foreign intelligence agency', detail:{type:'forensic', title:'Communication Records Inquiry Response', fields:[{label:'Contact', value:'A figure linked to a foreign intelligence agency'}, {label:'Method', value:'An encrypted messaging application'}], conclusion:'Regular contact over several months is confirmed, coinciding with the timing of the leaked government material.'}},
+      {icon:'💰', name:'Account Tracing Records', desc:'Records of financial transactions in exchange for information', detail:{type:'forensic', title:'Bank Account Trace (overseas remittances)', fields:[{label:'Route', value:'Wired abroad via a third country'}, {label:'Total', value:'Approximately 80,000,000 won'}], conclusion:'Large sums with no legitimate income explanation were deposited multiple times from abroad.'}}
     ]
   }
 },
@@ -3100,8 +3114,8 @@ const CASES = [
   },
   precedent:'공무상비밀누설죄는 통상 집행유예나 벌금형으로 처리되는 경우가 많습니다.',
   evidence:[
-    {icon:'💬', name:'메신저 대화 기록', desc:'발표 전 정책 정보가 담긴 대화'},
-    {icon:'📈', name:'거래 내역', desc:'정보를 이용한 것으로 의심되는 사전 거래'}
+    {icon:'💬', name:'메신저 대화 기록', desc:'발표 전 정책 정보가 담긴 대화', detail:{type:'handwritten', text:'그 정책 다음 달에 발표된대. 미리 땅 좀 사놔.', source:'피고인이 발신한 메신저 대화 내용 (정책 발표 3주 전)'}},
+    {icon:'📈', name:'거래 내역', desc:'정보를 이용한 것으로 의심되는 사전 거래', detail:{type:'forensic', title:'부동산 거래 내역 조회 결과', fields:[{label:'거래 대상', value:'정책 수혜 예정 지역 토지'}, {label:'거래 시점', value:'정책 발표 2주 전'}], conclusion:'일반에 공개되기 전 시점에 이루어진 거래로, 직무상 알게 된 정보를 이용한 것으로 의심됨.'}}
   ],
   en:{
     title:'Case 22. Disclosure of Official Secrets',
@@ -3124,8 +3138,8 @@ const CASES = [
     },
     precedent:'This offense is typically resolved with a suspended prison term or a fine.',
     evidence:[
-      {icon:'💬', name:'Messenger Chat Logs', desc:'Conversations containing policy information from before the announcement'},
-      {icon:'📈', name:'Transaction Records', desc:'Suspected advance transactions made using the information'}
+      {icon:'💬', name:'Messenger Chat Logs', desc:'Conversations containing policy information from before the announcement', detail:{type:'handwritten', text:'They\'re announcing that policy next month. Buy up some land now.', source:'A messenger conversation sent by the defendant (3 weeks before the announcement)'}},
+      {icon:'📈', name:'Transaction Records', desc:'Suspected advance transactions made using the information', detail:{type:'forensic', title:'Real Estate Transaction Record', fields:[{label:'Property', value:'Land in the area set to benefit from the policy'}, {label:'Timing', value:'2 weeks before the announcement'}], conclusion:'The transaction occurred before the information was made public, suggesting it was based on information obtained through official duty.'}}
     ]
   }
 },
@@ -3156,8 +3170,8 @@ const CASES = [
   },
   precedent:'이득액 5억~50억원 구간의 횡령 사건은 통상 징역 3~7년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📒', name:'회계 장부', desc:'사용 내역을 숨기기 위한 조작 흔적'},
-    {icon:'🏦', name:'계좌 추적 자료', desc:'회사 자금이 개인 계좌로 이체된 내역'}
+    {icon:'📒', name:'회계 장부', desc:'사용 내역을 숨기기 위한 조작 흔적', detail:{type:'forensic', title:'회계 장부 감정 결과', fields:[{label:'조작 방식', value:'접대비·소모품비 명목으로 분산 처리'}, {label:'조작 규모', value:'총 10억원 상당'}], conclusion:'실제 지출 내역과 대조한 결과, 상당수 항목이 허위로 기재된 것으로 확인됨.'}},
+    {icon:'🏦', name:'계좌 추적 자료', desc:'회사 자금이 개인 계좌로 이체된 내역', detail:{type:'forensic', title:'계좌 추적 자료 (회사 자금 흐름)', fields:[{label:'이체 경로', value:'회사 법인계좌 → 피고인 개인계좌 (12회 분할)'}, {label:'사용처', value:'고가 수입차 구매, 부동산 계약금'}], conclusion:'분할 이체를 통해 추적을 피하려 한 정황이 확인되며, 사용처 대부분이 개인적 용도임.'}}
   ],
   en:{
     title:'Case 23. Embezzlement (Aggravated Punishment for Specific Economic Crimes)',
@@ -3180,8 +3194,8 @@ const CASES = [
     },
     precedent:'Embezzlement cases involving gains between 500 million and 5 billion won are typically sentenced to between 3 and 7 years of imprisonment.',
     evidence:[
-      {icon:'📒', name:'Accounting Ledger', desc:'Signs of tampering to conceal the usage details'},
-      {icon:'🏦', name:'Account Tracing Records', desc:'Records of company funds transferred to a personal account'}
+      {icon:'📒', name:'Accounting Ledger', desc:'Signs of tampering to conceal the usage details', detail:{type:'forensic', title:'Accounting Ledger Analysis', fields:[{label:'Method', value:'Disguised as entertainment and supply expenses'}, {label:'Scale', value:'Approximately 1 billion won'}], conclusion:'A comparison with actual expenditures found a significant number of entries to be fabricated.'}},
+      {icon:'🏦', name:'Account Tracing Records', desc:'Records of company funds transferred to a personal account', detail:{type:'forensic', title:'Bank Account Trace (company funds)', fields:[{label:'Route', value:'Corporate account → defendant\'s personal account (12 installments)'}, {label:'Use of funds', value:'Purchase of a luxury imported car, down payment on real estate'}], conclusion:'The funds were split into installments apparently to evade detection, and were used almost entirely for personal purposes.'}}
     ]
   }
 },
@@ -3210,8 +3224,8 @@ const CASES = [
   },
   precedent:'업무상배임죄는 손해액과 고의성 정도에 따라 통상 집행유예부터 징역 5년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📧', name:'내부 이메일', desc:'경쟁사로부터의 이익 제안 정황'},
-    {icon:'📄', name:'계약서', desc:'시장 평균보다 불리한 계약 조건'}
+    {icon:'📧', name:'내부 이메일', desc:'경쟁사로부터의 이익 제안 정황', detail:{type:'handwritten', text:'이번 건 저희 쪽으로 넘겨주시면 별도로 사례하겠습니다.', source:'경쟁사 담당자가 피고인에게 보낸 이메일 (계약 체결 한 달 전)'}},
+    {icon:'📄', name:'계약서', desc:'시장 평균보다 불리한 계약 조건', detail:{type:'forensic', title:'계약서 조건 분석 결과', fields:[{label:'계약 단가', value:'시장 평균가 대비 약 30% 낮음'}, {label:'계약 상대방', value:'피고인이 이메일을 주고받은 바로 그 경쟁사'}], conclusion:'회사에 불리한 조건임에도 별다른 내부 검토 없이 신속히 체결된 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 24. Occupational Breach of Trust',
@@ -3234,8 +3248,8 @@ const CASES = [
     },
     precedent:'Occupational breach of trust is typically sentenced anywhere from a suspended prison term to 5 years of imprisonment, depending on the amount of loss and degree of intent.',
     evidence:[
-      {icon:'📧', name:'Internal Emails', desc:'Evidence of a benefit offered by the competitor'},
-      {icon:'📄', name:'Contract Document', desc:'Terms less favorable than the market average'}
+      {icon:'📧', name:'Internal Emails', desc:'Evidence of a benefit offered by the competitor', detail:{type:'handwritten', text:'If you route this deal to us, we\'ll make it worth your while separately.', source:'An email sent to the defendant by a competitor\'s representative, one month before the contract was signed'}},
+      {icon:'📄', name:'Contract Document', desc:'Terms less favorable than the market average', detail:{type:'forensic', title:'Contract Terms Analysis', fields:[{label:'Unit price', value:'About 30% below the market average'}, {label:'Counterparty', value:'The very competitor the defendant had been emailing'}], conclusion:'The contract, unfavorable to the company, was signed quickly with little internal review.'}}
     ]
   }
 },
@@ -3264,8 +3278,8 @@ const CASES = [
   },
   precedent:'연간 포탈세액 10억원 이상 사건은 통상 징역 5~10년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📚', name:'이중장부', desc:'매출을 축소 신고한 회계 자료'},
-    {icon:'🏦', name:'차명계좌 내역', desc:'매출 우회 정황이 담긴 계좌 기록'}
+    {icon:'📚', name:'이중장부', desc:'매출을 축소 신고한 회계 자료', detail:{type:'forensic', title:'이중장부 감정 결과', fields:[{label:'장부 종류', value:'세무 신고용 장부, 실제 매출 관리 장부'}, {label:'매출 누락 규모', value:'연간 12억원 상당'}], conclusion:'두 장부를 대조한 결과 실제 매출의 상당 부분이 신고 장부에서 조직적으로 누락됨.'}},
+    {icon:'🏦', name:'차명계좌 내역', desc:'매출 우회 정황이 담긴 계좌 기록', detail:{type:'forensic', title:'차명계좌 거래내역 조회 결과', fields:[{label:'명의자', value:'피고인의 친인척 3인'}, {label:'입금 패턴', value:'매출 발생 직후 소액으로 분산 입금'}], conclusion:'실제 관리자는 피고인으로 확인되었으며, 매출 누락분이 해당 계좌로 우회 입금된 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 25. Tax Evasion',
@@ -3287,8 +3301,8 @@ const CASES = [
     },
     precedent:'Cases involving annual tax evasion of 1 billion won or more are typically sentenced to between 5 and 10 years of imprisonment.',
     evidence:[
-      {icon:'📚', name:'Double-Entry Books', desc:'Accounting records with underreported revenue'},
-      {icon:'🏦', name:'Borrowed-Name Account Records', desc:'Account records showing revenue was routed around'}
+      {icon:'📚', name:'Double-Entry Books', desc:'Accounting records with underreported revenue', detail:{type:'forensic', title:'Double-Ledger Analysis', fields:[{label:'Ledgers', value:'One for tax filings, one tracking actual sales'}, {label:'Unreported revenue', value:'Approximately 1.2 billion won annually'}], conclusion:'Comparing the two ledgers reveals a large portion of actual revenue was systematically omitted from tax filings.'}},
+      {icon:'🏦', name:'Borrowed-Name Account Records', desc:'Account records showing revenue was routed around', detail:{type:'forensic', title:'Borrowed-Name Account Records', fields:[{label:'Account holders', value:'3 of the defendant\'s relatives'}, {label:'Deposit pattern', value:'Small amounts deposited in installments right after sales occurred'}], conclusion:'The defendant was confirmed to be the true controller of these accounts, into which unreported revenue was routed.'}}
     ]
   }
 },
@@ -3317,8 +3331,8 @@ const CASES = [
   },
   precedent:'뇌물공여죄는 금액과 대가성 정도에 따라 통상 벌금형부터 징역 3년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🏦', name:'계좌 추적 자료', desc:'금품 제공 시점과 금액 확인'},
-    {icon:'📅', name:'인허가 처리 기록', desc:'제공 직후 신속하게 처리된 정황'}
+    {icon:'🏦', name:'계좌 추적 자료', desc:'금품 제공 시점과 금액 확인', detail:{type:'forensic', title:'계좌 추적 자료 (금품 제공 내역)', fields:[{label:'제공 금액', value:'5,000만원'}, {label:'제공 시점', value:'인허가 신청 접수 직후'}], conclusion:'통상적인 처리 절차와 무관하게 거액이 담당 공무원에게 곧바로 전달된 정황이 확인됨.'}},
+    {icon:'📅', name:'인허가 처리 기록', desc:'제공 직후 신속하게 처리된 정황', detail:{type:'forensic', title:'인허가 처리 기록 조회 결과', fields:[{label:'통상 처리 기간', value:'평균 45일'}, {label:'해당 건 처리 기간', value:'7일'}], conclusion:'동종 사안 대비 현저히 빠르게 처리되어, 금품 제공과의 인과관계가 강하게 의심됨.'}}
   ],
   en:{
     title:'Case 26. Offering a Bribe',
@@ -3340,8 +3354,8 @@ const CASES = [
     },
     precedent:'This offense is typically sentenced anywhere from a fine to 3 years of imprisonment, depending on the amount and degree of transactional intent.',
     evidence:[
-      {icon:'🏦', name:'Account Tracing Records', desc:'Confirms the timing and amount of the payment'},
-      {icon:'📅', name:'Licensing Processing Record', desc:'Shows unusually swift processing right after the payment'}
+      {icon:'🏦', name:'Account Tracing Records', desc:'Confirms the timing and amount of the payment', detail:{type:'forensic', title:'Bank Account Trace (payment record)', fields:[{label:'Amount', value:'50,000,000 won'}, {label:'Timing', value:'Immediately after the permit application was filed'}], conclusion:'A large sum was transferred directly to the responsible official outside the normal process.'}},
+      {icon:'📅', name:'Licensing Processing Record', desc:'Shows unusually swift processing right after the payment', detail:{type:'forensic', title:'Permit Processing Record Inquiry', fields:[{label:'Average processing time', value:'45 days'}, {label:'This case', value:'7 days'}], conclusion:'Processed markedly faster than comparable cases, strongly suggesting a causal link to the payment.'}}
     ]
   }
 },
@@ -3370,8 +3384,8 @@ const CASES = [
   },
   precedent:'흉기 휴대 스토킹범죄는 통상 집행유예부터 징역 2년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📍', name:'위치 추적 기록', desc:'피해자 동선을 미리 파악한 정황'},
-    {icon:'📹', name:'CCTV 영상', desc:'흉기를 소지한 채 접근하는 장면'}
+    {icon:'📍', name:'위치 추적 기록', desc:'피해자 동선을 미리 파악한 정황', detail:{type:'forensic', title:'위치 추적 기록 조회 결과', fields:[{label:'조회 대상', value:'피고인이 설치한 위치추적기(피해자 차량 부착)'}, {label:'사용 기간', value:'약 2개월'}], conclusion:'피해자의 출퇴근 동선과 자주 방문하는 장소를 사전에 파악해온 정황이 확인됨.'}},
+    {icon:'📹', name:'CCTV 영상', desc:'흉기를 소지한 채 접근하는 장면', detail:{type:'cctv', timestamp:'사건 당일 20:05 — 피해자 자택 인근 CCTV', caption:'피고인이 흉기로 보이는 물건을 옷 속에 숨긴 채 피해자를 뒤따라 접근하는 장면이 촬영됨.'}}
   ],
   en:{
     title:'Case 27. Stalking',
@@ -3393,8 +3407,8 @@ const CASES = [
     },
     precedent:'Stalking crimes involving a weapon are typically sentenced anywhere from a suspended prison term to 2 years of imprisonment.',
     evidence:[
-      {icon:'📍', name:'Location Tracking Records', desc:"Evidence of prior knowledge of the victim's movements"},
-      {icon:'📹', name:'CCTV Footage', desc:'Shows approaching while carrying a weapon'}
+      {icon:'📍', name:'Location Tracking Records', desc:"Evidence of prior knowledge of the victim's movements", detail:{type:'forensic', title:'Location Tracker Data Inquiry', fields:[{label:'Device', value:'A tracker the defendant attached to the victim\'s car'}, {label:'Duration of use', value:'About 2 months'}], conclusion:'Confirms the defendant had been mapping out the victim\'s commute and frequented locations in advance.'}},
+      {icon:'📹', name:'CCTV Footage', desc:'Shows approaching while carrying a weapon', detail:{type:'cctv', timestamp:'20:05 on the day of the incident — CCTV near the victim\'s home', caption:'The defendant is seen approaching the victim from behind while concealing what appears to be a weapon under their clothing.'}}
     ]
   }
 },
@@ -3424,8 +3438,8 @@ const CASES = [
   },
   precedent:'향정신성의약품 매매 사건은 거래 규모에 따라 통상 징역 5~15년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'💊', name:'압수된 마약', desc:'개인 투약 범위를 초과하는 분량'},
-    {icon:'💬', name:'판매 대화 기록', desc:'구체적인 거래 금액과 수량이 담긴 대화'}
+    {icon:'💊', name:'압수된 마약', desc:'개인 투약 범위를 초과하는 분량', detail:{type:'forensic', title:'압수 마약류 감정 결과 (국립과학수사연구원)', fields:[{label:'성분', value:'메트암페타민(필로폰)'}, {label:'중량', value:'약 120g (약 4,000회 투약 분량)'}], conclusion:'개인 투약 목적으로 보기 어려운 대량으로, 판매 목적 소지로 판단됨.'}},
+    {icon:'💬', name:'판매 대화 기록', desc:'구체적인 거래 금액과 수량이 담긴 대화', detail:{type:'handwritten', text:'이번 건 0.5 두 개, 평소 가격대로 준비해뒀어.', source:'피고인의 휴대전화에서 복원된 판매 대화 기록'}}
   ],
   en:{
     title:'Case 28. Trafficking Narcotics',
@@ -3447,8 +3461,8 @@ const CASES = [
     },
     precedent:'Trafficking cases involving psychotropic substances are typically sentenced to between 5 and 15 years of imprisonment, depending on the scale of the transactions.',
     evidence:[
-      {icon:'💊', name:'Seized Drugs', desc:'A quantity exceeding what would be needed for personal use'},
-      {icon:'💬', name:'Sales Chat Logs', desc:'Conversations specifying concrete transaction amounts and quantities'}
+      {icon:'💊', name:'Seized Drugs', desc:'A quantity exceeding what would be needed for personal use', detail:{type:'forensic', title:'Seized Narcotics Analysis (National Forensic Service)', fields:[{label:'Substance', value:'Methamphetamine'}, {label:'Quantity', value:'Approx. 120g (about 4,000 doses)'}], conclusion:'Far more than could reasonably be for personal use, indicating possession for the purpose of sale.'}},
+      {icon:'💬', name:'Sales Chat Logs', desc:'Conversations specifying concrete transaction amounts and quantities', detail:{type:'handwritten', text:'Got two half-grams ready for this order, usual price.', source:'A sales conversation recovered from the defendant\'s phone'}}
     ]
   }
 },
@@ -3477,8 +3491,8 @@ const CASES = [
   },
   precedent:'아동학대치사죄는 상습성과 학대 정도에 따라 통상 징역 5~20년 또는 무기징역까지 선고되는 경우가 있습니다.',
   evidence:[
-    {icon:'🧬', name:'부검 결과서', desc:'서로 다른 시기의 다수 상처 확인'},
-    {icon:'📞', name:'이웃 신고 기록', desc:'반복적인 비명·울음소리 신고 내역'}
+    {icon:'🧬', name:'부검 결과서', desc:'서로 다른 시기의 다수 상처 확인', detail:{type:'forensic', title:'국립과학수사연구원 부검 결과서', fields:[{label:'사인', value:'복부 둔기 손상에 의한 장기 파열'}, {label:'소견', value:'서로 다른 시기에 발생한 골절 흔적 다수 확인'}], conclusion:'단발성 사고가 아닌, 장기간에 걸친 반복적 학대의 결과로 판단됨.'}},
+    {icon:'📞', name:'이웃 신고 기록', desc:'반복적인 비명·울음소리 신고 내역', detail:{type:'forensic', title:'이웃 신고 기록 (112 신고 이력)', fields:[{label:'신고 건수', value:'최근 1년간 6건'}, {label:'신고 내용', value:'"아이 울음소리와 비명이 자주 들린다"'}], conclusion:'반복적인 신고에도 실질적인 보호 조치가 이루어지지 않았던 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 29. Child Abuse Resulting in Death',
@@ -3500,8 +3514,8 @@ const CASES = [
     },
     precedent:'Child abuse resulting in death is sometimes sentenced anywhere from 5 to 20 years of imprisonment, or even life imprisonment, depending on the habitual nature and severity of the abuse.',
     evidence:[
-      {icon:'🧬', name:'Autopsy Report', desc:'Confirms numerous injuries from different points in time'},
-      {icon:'📞', name:'Neighbor Complaint Records', desc:"Records of repeated reports of screaming and crying"}
+      {icon:'🧬', name:'Autopsy Report', desc:'Confirms numerous injuries from different points in time', detail:{type:'forensic', title:'National Forensic Service Autopsy Report', fields:[{label:'Cause of death', value:'Ruptured internal organs from blunt abdominal trauma'}, {label:'Findings', value:'Multiple fractures identified from different points in time'}], conclusion:'Consistent with the result of prolonged, repeated abuse rather than a single incident.'}},
+      {icon:'📞', name:'Neighbor Complaint Records', desc:"Records of repeated reports of screaming and crying", detail:{type:'forensic', title:'Neighbor Report Log (emergency call history)', fields:[{label:'Number of reports', value:'6 over the past year'}, {label:'Content', value:'"A child\'s crying and screaming is heard frequently."'}], conclusion:'No effective protective action was taken despite repeated reports.'}}
     ]
   }
 },
@@ -3529,8 +3543,8 @@ const CASES = [
   },
   precedent:'허위사실 명예훼손죄는 통상 벌금형부터 집행유예 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'💻', name:'게시글 캡처', desc:'허위 사실이 담긴 게시글 원본'},
-    {icon:'📊', name:'조회 기록', desc:'게시글의 확산 규모'}
+    {icon:'💻', name:'게시글 캡처', desc:'허위 사실이 담긴 게시글 원본', detail:{type:'handwritten', text:'그 사람 예전에 시험에서 부정행위로 걸려서 퇴학당할 뻔했다던데?', source:'피고인이 온라인 커뮤니티에 게시한 글 (사실무근으로 확인됨)'}},
+    {icon:'📊', name:'조회 기록', desc:'게시글의 확산 규모', detail:{type:'forensic', title:'게시글 확산 규모 조회 결과', fields:[{label:'조회수', value:'약 4만 회'}, {label:'공유·캡처 확산', value:'다른 커뮤니티 3곳으로 재확산'}], conclusion:'짧은 시간 내 광범위하게 확산되어 피해자의 사회적 평판에 실질적 타격을 준 것으로 판단됨.'}}
   ],
   en:{
     title:'Case 30. Defamation (Stating a False Fact)',
@@ -3552,8 +3566,8 @@ const CASES = [
     },
     precedent:'Defamation involving a false statement is typically sentenced anywhere from a fine to a suspended prison term.',
     evidence:[
-      {icon:'💻', name:'Post Screenshot', desc:'The original post containing the false statement'},
-      {icon:'📊', name:'View-Count Records', desc:"The extent of the post's spread"}
+      {icon:'💻', name:'Post Screenshot', desc:'The original post containing the false statement', detail:{type:'handwritten', text:'I heard that person nearly got expelled for cheating on an exam once.', source:'A post the defendant made on an online community (confirmed to be baseless)'}},
+      {icon:'📊', name:'View-Count Records', desc:"The extent of the post's spread", detail:{type:'forensic', title:'Post Reach Analysis', fields:[{label:'Views', value:'Approximately 40,000'}, {label:'Spread', value:'Reposted and screenshotted across 3 other communities'}], conclusion:'The post spread widely in a short time, causing real damage to the victim\'s reputation.'}}
     ]
   }
 },
@@ -3581,8 +3595,8 @@ const CASES = [
   },
   precedent:'모욕죄는 대부분 벌금형으로 처리되며, 실형이 선고되는 경우는 드뭅니다.',
   evidence:[
-    {icon:'💬', name:'단체 채팅 기록', desc:'비하 표현이 담긴 대화 내용'},
-    {icon:'👥', name:'참여자 명단', desc:'채팅방에 있던 인원 확인'}
+    {icon:'💬', name:'단체 채팅 기록', desc:'비하 표현이 담긴 대화 내용', detail:{type:'handwritten', text:'저런 인간이 어떻게 여기서 일하는지 모르겠음. 진짜 답답하고 무능함.', source:'피고인이 회사 단체 채팅방에 전송한 메시지 (당사자 포함 12명이 열람 가능)'}},
+    {icon:'👥', name:'참여자 명단', desc:'채팅방에 있던 인원 확인', detail:{type:'forensic', title:'채팅방 참여자 명단 확인 결과', fields:[{label:'참여 인원', value:'12명 (피해자 포함)'}, {label:'공개 범위', value:'부서 전체 공지용 채팅방'}], conclusion:'다수가 열람할 수 있는 공개된 자리에서 이루어진 발언으로 확인됨.'}}
   ],
   en:{
     title:'Case 31. Insult',
@@ -3604,8 +3618,8 @@ const CASES = [
     },
     precedent:'Insult convictions are usually resolved with a fine; actual imprisonment is rare.',
     evidence:[
-      {icon:'💬', name:'Group Chat Records', desc:'Conversation containing demeaning language'},
-      {icon:'👥', name:'Participant List', desc:'Confirms who was present in the chat room'}
+      {icon:'💬', name:'Group Chat Records', desc:'Conversation containing demeaning language', detail:{type:'handwritten', text:'I don\'t get how someone like that even works here. Genuinely frustrating and incompetent.', source:'A message the defendant sent in the company group chat (visible to all 12 members, including the target)'}},
+      {icon:'👥', name:'Participant List', desc:'Confirms who was present in the chat room', detail:{type:'forensic', title:'Chat Participant List Verification', fields:[{label:'Participants', value:'12, including the victim'}, {label:'Scope', value:'A department-wide announcement chat'}], conclusion:'Confirmed to have been made in an open setting visible to a wide audience.'}}
     ]
   }
 },
@@ -3633,8 +3647,8 @@ const CASES = [
   },
   precedent:'단순 협박죄는 통상 벌금형이나 집행유예로 처리되는 경우가 많습니다.',
   evidence:[
-    {icon:'📱', name:'문자메시지 기록', desc:'구체적인 위협 내용이 담긴 메시지'},
-    {icon:'🗣️', name:'피해자 진술', desc:'지속적인 불안감을 호소하는 진술'}
+    {icon:'📱', name:'문자메시지 기록', desc:'구체적인 위협 내용이 담긴 메시지', detail:{type:'handwritten', text:'돈 안 갚으면 어떻게 되는지 몸으로 알려줄게. 각오해.', source:'피고인이 피해자에게 반복 발송한 문자메시지 중 일부'}},
+    {icon:'🗣️', name:'피해자 진술', desc:'지속적인 불안감을 호소하는 진술', detail:{type:'forensic', title:'피해자 진술 조서', fields:[{label:'진술 요지', value:'"밤에도 잠을 이루지 못할 정도로 불안하다"'}, {label:'대응 조치', value:'경찰에 신변보호 요청'}], conclusion:'반복적 협박으로 인한 실질적인 정신적 고통과 불안이 확인됨.'}}
   ],
   en:{
     title:'Case 32. Intimidation',
@@ -3656,8 +3670,8 @@ const CASES = [
     },
     precedent:'Simple intimidation is typically resolved with a fine or a suspended prison term.',
     evidence:[
-      {icon:'📱', name:'Text Message Records', desc:'Messages containing specific threats'},
-      {icon:'🗣️', name:"Victim's Statement", desc:'A statement describing ongoing anxiety'}
+      {icon:'📱', name:'Text Message Records', desc:'Messages containing specific threats', detail:{type:'handwritten', text:'If you don\'t pay up, I\'ll show you exactly what happens. Be ready.', source:'One of several text messages the defendant repeatedly sent the victim'}},
+      {icon:'🗣️', name:"Victim's Statement", desc:'A statement describing ongoing anxiety', detail:{type:'forensic', title:'Victim\'s Statement Record', fields:[{label:'Summary', value:'"I can\'t even sleep at night from the anxiety."'}, {label:'Action taken', value:'Requested police protection'}], conclusion:'Confirms genuine, ongoing psychological distress from the repeated threats.'}}
     ]
   }
 },
@@ -3686,8 +3700,8 @@ const CASES = [
   },
   precedent:'공갈죄는 갈취 금액과 협박의 정도에 따라 통상 집행유예부터 징역 4년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'💬', name:'협박 메시지', desc:'폭로를 조건으로 한 금전 요구 내용'},
-    {icon:'🏦', name:'송금 기록', desc:'총 2천만원의 송금 내역'}
+    {icon:'💬', name:'협박 메시지', desc:'폭로를 조건으로 한 금전 요구 내용', detail:{type:'handwritten', text:'이 사진 회사에 다 뿌리기 전에 2천만원 준비해.', source:'피고인이 피해자에게 보낸 협박 메시지'}},
+    {icon:'🏦', name:'송금 기록', desc:'총 2천만원의 송금 내역', detail:{type:'forensic', title:'송금 기록 조회 결과', fields:[{label:'송금 횟수', value:'총 4회'}, {label:'합계', value:'2,000만원'}], conclusion:'협박 메시지 발송 직후부터 순차적으로 이루어진 송금으로, 시점상 인과관계가 뚜렷함.'}}
   ],
   en:{
     title:'Case 33. Extortion',
@@ -3709,8 +3723,8 @@ const CASES = [
     },
     precedent:'Extortion is typically sentenced anywhere from a suspended prison term to 4 years of imprisonment, depending on the amount extorted and the degree of intimidation.',
     evidence:[
-      {icon:'💬', name:'Threatening Messages', desc:'A demand for money conditioned on exposure'},
-      {icon:'🏦', name:'Transfer Records', desc:'A record of 20 million won transferred in total'}
+      {icon:'💬', name:'Threatening Messages', desc:'A demand for money conditioned on exposure', detail:{type:'handwritten', text:'Get me 20 million won before I send these photos around the office.', source:'A threatening message the defendant sent the victim'}},
+      {icon:'🏦', name:'Transfer Records', desc:'A record of 20 million won transferred in total', detail:{type:'forensic', title:'Money Transfer Records', fields:[{label:'Number of transfers', value:'4'}, {label:'Total', value:'20,000,000 won'}], conclusion:'The transfers followed directly after the threatening message, with a clear causal timeline.'}}
     ]
   }
 },
@@ -3738,8 +3752,8 @@ const CASES = [
   },
   precedent:'단순 감금죄는 통상 집행유예부터 징역 2년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'CCTV 영상', desc:'문을 열려다 제지당하는 장면'},
-    {icon:'🗣️', name:'피해자 진술', desc:'감금 시간과 상황에 대한 진술'}
+    {icon:'📹', name:'CCTV 영상', desc:'문을 열려다 제지당하는 장면', detail:{type:'cctv', timestamp:'사건 당일 15:20 — 사무실 내부 CCTV', caption:'피해자가 문을 열고 나가려 하자 피고인이 앞을 막아서며 다시 자리로 데려가는 장면이 여러 차례 반복됨.'}},
+    {icon:'🗣️', name:'피해자 진술', desc:'감금 시간과 상황에 대한 진술', detail:{type:'forensic', title:'피해자 진술 조서', fields:[{label:'감금 시간', value:'약 4시간'}, {label:'진술 요지', value:'"화장실도 감시하에 다녀와야 했다"'}], conclusion:'물리적 이동의 자유가 명확히 제한되었던 상황임이 진술을 통해 확인됨.'}}
   ],
   en:{
     title:'Case 34. Unlawful Confinement',
@@ -3761,8 +3775,8 @@ const CASES = [
     },
     precedent:'Simple unlawful confinement is typically sentenced anywhere from a suspended prison term to 2 years of imprisonment.',
     evidence:[
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the victim being stopped while trying to open the door'},
-      {icon:'🗣️', name:"Victim's Statement", desc:'A statement on the duration and circumstances of the confinement'}
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the victim being stopped while trying to open the door', detail:{type:'cctv', timestamp:'15:20 on the day of the incident — Office interior CCTV', caption:'The victim repeatedly tries to open the door and leave, only to be blocked and brought back to their seat by the defendant each time.'}},
+      {icon:'🗣️', name:"Victim's Statement", desc:'A statement on the duration and circumstances of the confinement', detail:{type:'forensic', title:'Victim\'s Statement Record', fields:[{label:'Duration confined', value:'About 4 hours'}, {label:'Summary', value:'"Even trips to the restroom were supervised."'}], conclusion:'Confirms the victim\'s freedom of movement was clearly restricted during this time.'}}
     ]
   }
 },
@@ -3790,8 +3804,8 @@ const CASES = [
   },
   precedent:'친권자 간 양육권 분쟁 과정에서 발생한 사건은 정상 참작의 여지가 커 통상 집행유예로 처리되는 경우가 많습니다.',
   evidence:[
-    {icon:'📱', name:'통신 기록', desc:'거주지를 숨기고 연락을 차단한 정황'},
-    {icon:'🗣️', name:'목격자 진술', desc:'자녀와 함께 있는 모습에 대한 진술'}
+    {icon:'📱', name:'통신 기록', desc:'거주지를 숨기고 연락을 차단한 정황', detail:{type:'forensic', title:'통신 기록 조회 결과', fields:[{label:'명의 변경', value:'잠적 직후 자녀 명의 휴대전화 해지'}, {label:'거주지', value:'기존 주소지에서 확인 불가'}], conclusion:'상대방과의 연락 및 위치 파악을 의도적으로 차단한 정황이 확인됨.'}},
+    {icon:'🗣️', name:'목격자 진술', desc:'자녀와 함께 있는 모습에 대한 진술', detail:{type:'forensic', title:'목격자 진술 조서 (지인)', fields:[{label:'진술 요지', value:'"아이와 함께 지방의 한 모텔에 머무는 것을 봤다"'}], conclusion:'피고인이 미성년 자녀와 함께 은신 중이었음을 뒷받침하는 진술.'}}
   ],
   en:{
     title:'Case 35. Kidnapping of a Minor',
@@ -3813,8 +3827,8 @@ const CASES = [
     },
     precedent:'Cases arising from a custody dispute between parents often leave substantial room for mitigating circumstances and are typically resolved with a suspended prison term.',
     evidence:[
-      {icon:'📱', name:'Communication Records', desc:'Evidence of concealing their residence and cutting off contact'},
-      {icon:'🗣️', name:'Witness Statement', desc:'A statement about seeing the defendant together with the child'}
+      {icon:'📱', name:'Communication Records', desc:'Evidence of concealing their residence and cutting off contact', detail:{type:'forensic', title:'Communication Records Inquiry', fields:[{label:'Line change', value:'Child\'s phone line canceled immediately after disappearing'}, {label:'Residence', value:'Unconfirmed at any known address'}], conclusion:'Confirms a deliberate effort to cut off contact and prevent the child from being located.'}},
+      {icon:'🗣️', name:'Witness Statement', desc:'A statement about seeing the defendant together with the child', detail:{type:'forensic', title:'Witness Statement Record (acquaintance)', fields:[{label:'Summary', value:'"I saw them staying with the child at a motel out of town."'}], conclusion:'Supports that the defendant was in hiding with the minor child.'}}
     ]
   }
 },
@@ -3843,8 +3857,8 @@ const CASES = [
   },
   precedent:'컴퓨터등사용사기죄는 편취 금액에 따라 통상 집행유예부터 징역 5년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🖥️', name:'접속 기록', desc:'소유자의 통상적 위치와 다른 곳에서의 접속'},
-    {icon:'💰', name:'이체 내역', desc:'5천만원 상당이 피고인 계좌로 이체된 기록'}
+    {icon:'🖥️', name:'접속 기록', desc:'소유자의 통상적 위치와 다른 곳에서의 접속', detail:{type:'forensic', title:'접속 기록 조회 결과', fields:[{label:'접속 IP', value:'해외 우회 서버 경유'}, {label:'평소 접속지', value:'계정 소유자는 통상 국내에서만 접속'}], conclusion:'소유자의 평소 접속 패턴과 명백히 다른 비정상적 접속으로 확인됨.'}},
+    {icon:'💰', name:'이체 내역', desc:'5천만원 상당이 피고인 계좌로 이체된 기록', detail:{type:'forensic', title:'가상자산 거래소 이체 내역', fields:[{label:'이체 금액', value:'5,000만원 상당'}, {label:'수신 계좌', value:'피고인 명의 지갑'}], conclusion:'탈취한 계정을 이용해 짧은 시간 내 자금을 자신의 지갑으로 이전시킨 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 36. Computer-Use Fraud',
@@ -3866,8 +3880,8 @@ const CASES = [
     },
     precedent:'Computer-use fraud is typically sentenced anywhere from a suspended prison term to 5 years of imprisonment, depending on the amount taken.',
     evidence:[
-      {icon:'🖥️', name:'Access Logs', desc:"Login from a location different from the owner's usual one"},
-      {icon:'💰', name:'Transfer Records', desc:"A record of about 50 million won transferred into the defendant's account"}
+      {icon:'🖥️', name:'Access Logs', desc:"Login from a location different from the owner's usual one", detail:{type:'forensic', title:'Access Log Inquiry', fields:[{label:'Login IP', value:'Routed through an overseas proxy server'}, {label:'Normal pattern', value:'The account owner typically logs in only from within the country'}], conclusion:'Clearly inconsistent with the account owner\'s normal login pattern.'}},
+      {icon:'💰', name:'Transfer Records', desc:"A record of about 50 million won transferred into the defendant's account", detail:{type:'forensic', title:'Crypto Exchange Transfer Record', fields:[{label:'Amount transferred', value:'Approx. 50,000,000 won'}, {label:'Receiving wallet', value:'Registered to the defendant'}], conclusion:'Funds were moved into a wallet under the defendant\'s name within a short time using the compromised account.'}}
     ]
   }
 },
@@ -3896,8 +3910,8 @@ const CASES = [
   },
   precedent:'사문서위조죄는 통상 벌금형부터 집행유예 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'✍️', name:'필적 감정 결과서', desc:'서명이 명의자 필체와 다르다는 감정 결과'},
-    {icon:'📄', name:'위조된 계약서', desc:'문제가 된 서명이 기재된 문서 원본'}
+    {icon:'✍️', name:'필적 감정 결과서', desc:'서명이 명의자 필체와 다르다는 감정 결과', detail:{type:'forensic', title:'필적 감정 결과서 (국립과학수사연구원)', fields:[{label:'감정 대상', value:'계약서상 서명 vs 명의자 평소 필체'}, {label:'감정 결과', value:'필압·획순 등에서 뚜렷한 불일치 확인'}], conclusion:'해당 서명은 명의자 본인이 작성한 것이 아닌 것으로 판단됨.'}},
+    {icon:'📄', name:'위조된 계약서', desc:'문제가 된 서명이 기재된 문서 원본', detail:{type:'forensic', title:'위조된 계약서 원본 분석', fields:[{label:'문제 조항', value:'명의자에게 불리한 위약금 조항 추가'}, {label:'작성 시점', value:'명의자 해외 체류 기간 중'}], conclusion:'명의자가 계약 내용을 확인할 수 없었던 시기에 작성·행사된 것으로 확인됨.'}}
   ],
   en:{
     title:'Case 37. Forgery of a Private Document',
@@ -3919,8 +3933,8 @@ const CASES = [
     },
     precedent:'Forgery of a private document is typically sentenced anywhere from a fine to a suspended prison term.',
     evidence:[
-      {icon:'✍️', name:'Handwriting Analysis Report', desc:"Analysis confirming the signature differs from the named party's handwriting"},
-      {icon:'📄', name:'Forged Contract', desc:'The original document bearing the disputed signature'}
+      {icon:'✍️', name:'Handwriting Analysis Report', desc:"Analysis confirming the signature differs from the named party's handwriting", detail:{type:'forensic', title:'Handwriting Analysis Report (National Forensic Service)', fields:[{label:'Compared', value:'Signature on the contract vs. the account holder\'s usual handwriting'}, {label:'Result', value:'Clear discrepancies found in pen pressure and stroke order'}], conclusion:'The signature is determined not to have been written by the account holder themself.'}},
+      {icon:'📄', name:'Forged Contract', desc:'The original document bearing the disputed signature', detail:{type:'forensic', title:'Analysis of the Forged Contract Original', fields:[{label:'Disputed clause', value:'An added penalty clause unfavorable to the account holder'}, {label:'Drafted', value:'While the account holder was overseas'}], conclusion:'Confirmed to have been drafted and used at a time when the account holder could not review its contents.'}}
     ]
   }
 },
@@ -3950,8 +3964,8 @@ const CASES = [
   },
   precedent:'통화위조죄는 유통 규모에 따라 통상 징역 2~7년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🖨️', name:'위조 장비', desc:'특수 프린터와 용지 압수'},
-    {icon:'💵', name:'위조지폐', desc:'제작된 5만원권 위조지폐 다수'}
+    {icon:'🖨️', name:'위조 장비', desc:'특수 프린터와 용지 압수', detail:{type:'forensic', title:'위조 장비 압수 감정 결과', fields:[{label:'압수 품목', value:'특수 잉크 프린터, 위변조 방지 문양 인쇄 필름'}, {label:'압수 장소', value:'피고인의 자택 지하 작업실'}], conclusion:'시중에서 구하기 어려운 전문 장비로, 통화 위조 목적 외 다른 용도를 설명하기 어려움.'}},
+    {icon:'💵', name:'위조지폐', desc:'제작된 5만원권 위조지폐 다수', detail:{type:'forensic', title:'압수 위조지폐 감정 결과', fields:[{label:'권종', value:'5만원권'}, {label:'수량', value:'총 340장 (1,700만원 상당)'}], conclusion:'실제 통용되는 화폐와 매우 유사하게 제작되어 육안 구별이 어려운 수준으로 확인됨.'}}
   ],
   en:{
     title:'Case 38. Currency Counterfeiting',
@@ -3973,8 +3987,8 @@ const CASES = [
     },
     precedent:'Currency counterfeiting is typically sentenced to between 2 and 7 years of imprisonment, depending on the scale of circulation.',
     evidence:[
-      {icon:'🖨️', name:'Counterfeiting Equipment', desc:'Seized special printer and paper'},
-      {icon:'💵', name:'Counterfeit Bills', desc:'Numerous manufactured counterfeit 50,000-won notes'}
+      {icon:'🖨️', name:'Counterfeiting Equipment', desc:'Seized special printer and paper', detail:{type:'forensic', title:'Seized Forgery Equipment Analysis', fields:[{label:'Items seized', value:'A specialty ink printer, anti-counterfeit pattern printing film'}, {label:'Location', value:'The basement workshop at the defendant\'s home'}], conclusion:'Specialized equipment not readily available on the open market, with no plausible use other than currency counterfeiting.'}},
+      {icon:'💵', name:'Counterfeit Bills', desc:'Numerous manufactured counterfeit 50,000-won notes', detail:{type:'forensic', title:'Seized Counterfeit Bills Analysis', fields:[{label:'Denomination', value:'50,000-won notes'}, {label:'Quantity', value:'340 notes (worth 17,000,000 won)'}], conclusion:'Produced closely enough to genuine currency that they are difficult to distinguish by sight.'}}
     ]
   }
 },
@@ -4002,8 +4016,8 @@ const CASES = [
   },
   precedent:'위증죄는 통상 벌금형부터 집행유예 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📼', name:'법정 진술 녹취록', desc:'객관적 기록과 모순되는 진술 내용'},
-    {icon:'💬', name:'사전 청탁 정황', desc:'특정 내용으로 진술해달라는 부탁 기록'}
+    {icon:'📼', name:'법정 진술 녹취록', desc:'객관적 기록과 모순되는 진술 내용', detail:{type:'forensic', title:'법정 진술 녹취록 발췌', fields:[{label:'진술 내용', value:'"그 날 계약서에 서명하는 걸 분명히 봤습니다"'}, {label:'모순점', value:'같은 시각 피고인은 다른 지역에 있었음이 통신기록으로 확인됨'}], conclusion:'진술 내용이 객관적 물증과 명백히 배치됨.'}},
+    {icon:'💬', name:'사전 청탁 정황', desc:'특정 내용으로 진술해달라는 부탁 기록', detail:{type:'handwritten', text:'그날 봤다고만 말해줘. 나머지는 내가 알아서 할게.', source:'위증 요청 정황이 담긴 사전 문자메시지'}}
   ],
   en:{
     title:'Case 39. Perjury',
@@ -4025,8 +4039,8 @@ const CASES = [
     },
     precedent:'Perjury is typically sentenced anywhere from a fine to a suspended prison term.',
     evidence:[
-      {icon:'📼', name:'Courtroom Testimony Transcript', desc:'Testimony that contradicts objective records'},
-      {icon:'💬', name:'Evidence of a Prior Request', desc:'A record of being asked to testify in a particular way'}
+      {icon:'📼', name:'Courtroom Testimony Transcript', desc:'Testimony that contradicts objective records', detail:{type:'forensic', title:'Excerpt of Courtroom Testimony Transcript', fields:[{label:'Testimony', value:'"I clearly saw him sign the contract that day."'}, {label:'Contradiction', value:'Phone records confirm the defendant was in a different area at that exact time'}], conclusion:'The testimony directly contradicts objective physical evidence.'}},
+      {icon:'💬', name:'Evidence of a Prior Request', desc:'A record of being asked to testify in a particular way', detail:{type:'handwritten', text:'Just say you saw it that day. I\'ll take care of the rest.', source:'A prior text message showing the request to give false testimony'}}
     ]
   }
 },
@@ -4054,8 +4068,8 @@ const CASES = [
   },
   precedent:'무고죄는 허위성의 명백함과 피해 정도에 따라 통상 집행유예부터 징역 3년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📋', name:'고소장', desc:'허위 피해 사실이 담긴 고소 내용'},
-    {icon:'🏥', name:'진단서', desc:'주장하는 사건 발생일보다 앞선 발급일 확인'}
+    {icon:'📋', name:'고소장', desc:'허위 피해 사실이 담긴 고소 내용', detail:{type:'handwritten', text:'그 사람이 저를 폭행하고 돈까지 빼앗아 갔습니다. 처벌해주세요.', source:'피고인이 작성해 경찰서에 제출한 고소장 원본'}},
+    {icon:'🏥', name:'진단서', desc:'주장하는 사건 발생일보다 앞선 발급일 확인', detail:{type:'forensic', title:'진단서 발급일 대조 결과', fields:[{label:'주장하는 피해일', value:'3월 15일'}, {label:'진단서 발급일', value:'3월 10일 (피해 주장일보다 5일 이름)'}], conclusion:'주장하는 피해 발생일보다 진단서가 먼저 발급되어, 상해 내용의 신빙성에 중대한 의문이 제기됨.'}}
   ],
   en:{
     title:'Case 40. False Accusation',
@@ -4077,8 +4091,8 @@ const CASES = [
     },
     precedent:'False accusation is typically sentenced anywhere from a suspended prison term to 3 years of imprisonment, depending on how clear the falsity was and the extent of harm caused.',
     evidence:[
-      {icon:'📋', name:'The Complaint', desc:'The complaint containing the false claim of harm'},
-      {icon:'🏥', name:'Medical Certificate', desc:'Confirms an issue date predating the alleged incident'}
+      {icon:'📋', name:'The Complaint', desc:'The complaint containing the false claim of harm', detail:{type:'handwritten', text:'That person assaulted me and took my money. Please punish them.', source:'The original complaint the defendant filed with the police'}},
+      {icon:'🏥', name:'Medical Certificate', desc:'Confirms an issue date predating the alleged incident', detail:{type:'forensic', title:'Diagnosis Date Comparison', fields:[{label:'Claimed date of harm', value:'March 15'}, {label:'Diagnosis issued', value:'March 10 (5 days before the claimed date)'}], conclusion:'The diagnosis was issued before the claimed date of harm, raising serious doubt about the credibility of the injury claim.'}}
     ]
   }
 },
@@ -4108,8 +4122,8 @@ const CASES = [
   ],
   precedent:'경합범은 가장 무거운 죄(방화)의 형에 그 2분의 1까지 가중되어, 통상 징역 7~15년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🧬', name:'DNA 증거', desc:'강간 사실을 뒷받침하는 물증'},
-    {icon:'🔥', name:'화재 감식 결과', desc:'시신 유기 장소에서의 방화 흔적'}
+    {icon:'🧬', name:'DNA 증거', desc:'강간 사실을 뒷받침하는 물증', detail:{type:'forensic', title:'국립과학수사연구원 DNA 감정서', fields:[{label:'감정물', value:'피해자 신체에서 채취한 체액'}, {label:'대조 결과', value:'피고인의 DNA와 일치'}], conclusion:'강간 사실을 뒷받침하는 직접적인 생물학적 증거로 확인됨.'}},
+    {icon:'🔥', name:'화재 감식 결과', desc:'시신 유기 장소에서의 방화 흔적', detail:{type:'forensic', title:'화재 감식 결과서 (시신 유기 장소)', fields:[{label:'발화 지점', value:'시신이 발견된 야산 인근'}, {label:'감식 소견', value:'인화물질 사용 흔적, 증거 인멸 목적으로 추정'}], conclusion:'시신 발견을 지연시키고 증거를 없애기 위한 의도적 방화로 판단됨.'}}
   ],
   en:{
     title:'Case 41. Rape · Corpse Desecration · Arson (Concurrent Offenses)',
@@ -4131,8 +4145,8 @@ const CASES = [
     ],
     precedent:'For concurrent offenses, the term for the most serious offense (arson) is increased by up to one-half, typically resulting in sentences between 7 and 15 years of imprisonment.',
     evidence:[
-      {icon:'🧬', name:'DNA Evidence', desc:'Physical evidence supporting the rape'},
-      {icon:'🔥', name:'Fire Forensic Results', desc:'Traces of arson at the site where the body was abandoned'}
+      {icon:'🧬', name:'DNA Evidence', desc:'Physical evidence supporting the rape', detail:{type:'forensic', title:'National Forensic Service DNA Report', fields:[{label:'Sample', value:'Bodily fluid collected from the victim'}, {label:'Match result', value:'Matches the defendant\'s DNA'}], conclusion:'Direct biological evidence supporting the rape charge.'}},
+      {icon:'🔥', name:'Fire Forensic Results', desc:'Traces of arson at the site where the body was abandoned', detail:{type:'forensic', title:'Fire Investigation Report (body disposal site)', fields:[{label:'Point of origin', value:'Near the mountainside where the body was found'}, {label:'Findings', value:'Traces of accelerant use, presumed intended to destroy evidence'}], conclusion:'Determined to be deliberate arson meant to delay discovery of the body and eliminate evidence.'}}
     ]
   }
 },
@@ -4162,8 +4176,8 @@ const CASES = [
   ],
   precedent:'경합범은 가장 무거운 죄(특수강도)의 형에 그 2분의 1까지 가중되어, 통상 징역 5~12년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🪢', name:'결박 도구', desc:'피해자를 묶는 데 사용된 끈'},
-    {icon:'🏥', name:'상해진단서', desc:'전치 4주 진단'}
+    {icon:'🪢', name:'결박 도구', desc:'피해자를 묶는 데 사용된 끈', detail:{type:'forensic', title:'결박 도구 감정 결과', fields:[{label:'압수 품목', value:'노끈, 청테이프'}, {label:'발견 장소', value:'피해자 자택 거실'}], conclusion:'피해자의 손목·발목에 남은 압박흔과 결박 도구의 형태가 일치함.'}},
+    {icon:'🏥', name:'상해진단서', desc:'전치 4주 진단', detail:{type:'forensic', title:'상해진단서 (병원 발행)', fields:[{label:'진단명', value:'손목 부위 열상, 갈비뼈 타박상'}, {label:'치료 기간', value:'전치 4주'}], conclusion:'장시간 결박 및 물리적 폭행 과정에서 발생한 손상으로 판단됨.'}}
   ],
   en:{
     title:'Case 42. Aggravated Robbery · Unlawful Confinement · Bodily Injury (Concurrent Offenses)',
@@ -4185,8 +4199,8 @@ const CASES = [
     ],
     precedent:'For concurrent offenses, the term for the most serious offense (aggravated robbery) is increased by up to one-half, typically resulting in sentences between 5 and 12 years of imprisonment.',
     evidence:[
-      {icon:'🪢', name:'Restraint Materials', desc:'The rope used to bind the victim'},
-      {icon:'🏥', name:'Medical Certificate', desc:'Diagnosis of 4 weeks required for treatment'}
+      {icon:'🪢', name:'Restraint Materials', desc:'The rope used to bind the victim', detail:{type:'forensic', title:'Restraint Materials Analysis', fields:[{label:'Items seized', value:'Rope, packing tape'}, {label:'Found in', value:'The living room of the victim\'s home'}], conclusion:'Matches the ligature marks found on the victim\'s wrists and ankles.'}},
+      {icon:'🏥', name:'Medical Certificate', desc:'Diagnosis of 4 weeks required for treatment', detail:{type:'forensic', title:'Medical Diagnosis Report (issued by hospital)', fields:[{label:'Diagnosis', value:'Laceration on the wrist, rib contusions'}, {label:'Recovery period', value:'4 weeks'}], conclusion:'Consistent with injuries sustained during prolonged restraint and physical assault.'}}
     ]
   }
 },
@@ -4216,8 +4230,8 @@ const CASES = [
   ],
   precedent:'동종(징역)의 경합범은 가장 무거운 죄의 장기에 2분의 1까지 가중하되 각 죄의 형기를 합산한 범위(최대 15년)를 넘을 수 없어, 통상 집행유예부터 징역 7년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'✍️', name:'필적 감정 결과서', desc:'위조된 승인서 서명이 대표이사 필체와 다름'},
-    {icon:'📄', name:'거래 계약서', desc:'시장가보다 불리한 거래 조건 확인'}
+    {icon:'✍️', name:'필적 감정 결과서', desc:'위조된 승인서 서명이 대표이사 필체와 다름', detail:{type:'forensic', title:'필적 감정 결과서 (국립과학수사연구원)', fields:[{label:'감정 대상', value:'승인서상 대표이사 서명'}, {label:'감정 결과', value:'대표이사 평소 필체와 명백히 상이함'}], conclusion:'해당 승인서는 대표이사 본인이 아닌 제3자가 작성한 것으로 판단됨.'}},
+    {icon:'📄', name:'거래 계약서', desc:'시장가보다 불리한 거래 조건 확인', detail:{type:'forensic', title:'거래 계약서 조건 분석', fields:[{label:'거래 단가', value:'시장가 대비 약 25% 낮음'}, {label:'거래 상대방', value:'피고인의 친인척이 운영하는 업체'}], conclusion:'회사에 명백히 불리한 조건의 거래로, 사적 이익을 위한 배임 행위로 판단됨.'}}
   ],
   en:{
     title:'Case 43. Embezzlement · Forgery of a Private Document · Breach of Trust (Concurrent Offenses)',
@@ -4240,8 +4254,8 @@ const CASES = [
     ],
     precedent:'For concurrent offenses of the same kind (imprisonment), the maximum term for the most serious offense is increased by up to one-half, but may not exceed the sum of the terms for each offense (up to 15 years); sentences typically range from a suspended prison term to 7 years of imprisonment.',
     evidence:[
-      {icon:'✍️', name:'Handwriting Analysis Report', desc:"Confirms the forged approval document's signature differs from the CEO's handwriting"},
-      {icon:'📄', name:'Transaction Contract', desc:'Confirms terms less favorable than market rates'}
+      {icon:'✍️', name:'Handwriting Analysis Report', desc:"Confirms the forged approval document's signature differs from the CEO's handwriting", detail:{type:'forensic', title:'Handwriting Analysis Report (National Forensic Service)', fields:[{label:'Compared', value:'The CEO\'s signature on the approval document'}, {label:'Result', value:'Clearly inconsistent with the CEO\'s usual handwriting'}], conclusion:'Determined that this approval document was written by a third party, not the CEO.'}},
+      {icon:'📄', name:'Transaction Contract', desc:'Confirms terms less favorable than market rates', detail:{type:'forensic', title:'Transaction Contract Terms Analysis', fields:[{label:'Unit price', value:'About 25% below market rate'}, {label:'Counterparty', value:'A company run by the defendant\'s relative'}], conclusion:'A deal clearly disadvantageous to the company, made for personal benefit — constituting breach of trust.'}}
     ]
   }
 },
@@ -4269,8 +4283,8 @@ const CASES = [
   },
   precedent:'단순폭행죄는 합의 여부와 상해 정도에 따라 통상 벌금형부터 집행유예 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🏥', name:'상해진단서', desc:'전치 2주의 타박상 진단'},
-    {icon:'🗣️', name:'목격자 진술', desc:'다툼 및 폭행 경위에 대한 진술'}
+    {icon:'🏥', name:'상해진단서', desc:'전치 2주의 타박상 진단', detail:{type:'forensic', title:'상해진단서 (병원 발행)', fields:[{label:'진단명', value:'우측 뺨 부위 타박상'}, {label:'치료 기간', value:'전치 2주'}], conclusion:'가격 부위와 정도가 피해자 진술과 부합함.'}},
+    {icon:'🗣️', name:'목격자 진술', desc:'다툼 및 폭행 경위에 대한 진술', detail:{type:'forensic', title:'목격자 진술 조서 (술자리 동석자)', fields:[{label:'진술 요지', value:'"말다툼 중 피고인이 먼저 피해자를 밀치고 뺨을 때렸다"'}], conclusion:'목격자가 다툼의 시작과 폭행 경위를 구체적으로 진술함.'}}
   ],
   en:{
     title:'Case 44. Simple Assault',
@@ -4292,8 +4306,8 @@ const CASES = [
     },
     precedent:'Simple assault is typically sentenced anywhere from a fine to a suspended prison term, depending on whether a settlement was reached and the degree of injury.',
     evidence:[
-      {icon:'🏥', name:'Medical Certificate', desc:'Diagnosis of bruising requiring 2 weeks of treatment'},
-      {icon:'🗣️', name:'Witness Statements', desc:'Statements on the dispute and the circumstances of the assault'}
+      {icon:'🏥', name:'Medical Certificate', desc:'Diagnosis of bruising requiring 2 weeks of treatment', detail:{type:'forensic', title:'Medical Diagnosis Report (issued by hospital)', fields:[{label:'Diagnosis', value:'Contusion to the right cheek'}, {label:'Recovery period', value:'2 weeks'}], conclusion:'The location and severity of the injury match the victim\'s account.'}},
+      {icon:'🗣️', name:'Witness Statements', desc:'Statements on the dispute and the circumstances of the assault', detail:{type:'forensic', title:'Witness Statement Record (present at the gathering)', fields:[{label:'Summary', value:'"During the argument, the defendant shoved the victim first, then slapped them."'}], conclusion:'The witness gave a specific account of how the altercation began and the assault occurred.'}}
     ]
   }
 },
@@ -4321,8 +4335,8 @@ const CASES = [
   },
   precedent:'재물손괴죄는 손해 규모와 고의성 정도에 따라 통상 벌금형부터 집행유예 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'CCTV 영상', desc:'차량을 긁는 장면이 촬영됨'},
-    {icon:'🧾', name:'수리 견적서', desc:'차량 옆면 전체 도장 손상 확인'}
+    {icon:'📹', name:'CCTV 영상', desc:'차량을 긁는 장면이 촬영됨', detail:{type:'cctv', timestamp:'사건 당일 02:15 — 아파트 주차장 CCTV', caption:'피고인이 열쇠로 보이는 물건을 손에 쥐고 주차된 차량 옆면을 따라 걸으며 긁는 장면이 촬영됨.'}},
+    {icon:'🧾', name:'수리 견적서', desc:'차량 옆면 전체 도장 손상 확인', detail:{type:'forensic', title:'차량 수리 견적서', fields:[{label:'손상 부위', value:'차량 옆면 전체 (앞문~뒷범퍼)'}, {label:'수리 견적액', value:'320만원'}], conclusion:'단순 접촉이 아닌 의도적으로 길게 그어진 흔적으로, 전체 재도장이 필요한 수준의 손상.'}}
   ],
   en:{
     title:'Case 45. Property Damage',
@@ -4344,8 +4358,8 @@ const CASES = [
     },
     precedent:'Property damage is typically sentenced anywhere from a fine to a suspended prison term, depending on the extent of the loss and the degree of intent.',
     evidence:[
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the vehicle being scratched'},
-      {icon:'🧾', name:'Repair Estimate', desc:'Confirms paint damage across the entire side of the vehicle'}
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the vehicle being scratched', detail:{type:'cctv', timestamp:'02:15 on the day of the incident — Apartment parking lot CCTV', caption:'The defendant, holding what appears to be a key, is seen walking alongside a parked car and dragging it against the surface.'}},
+      {icon:'🧾', name:'Repair Estimate', desc:'Confirms paint damage across the entire side of the vehicle', detail:{type:'forensic', title:'Vehicle Repair Estimate', fields:[{label:'Damaged area', value:'Entire side of the vehicle (front door to rear bumper)'}, {label:'Estimated cost', value:'3,200,000 won'}], conclusion:'Not incidental contact but a long, deliberate scratch requiring a full repaint of the affected panels.'}}
     ]
   }
 },
@@ -4373,8 +4387,8 @@ const CASES = [
   },
   precedent:'상습도박죄는 판돈 규모와 횟수에 따라 통상 벌금형부터 징역 1년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🏦', name:'계좌 거래 내역', desc:'수백만원 단위의 반복적인 자금 이동'},
-    {icon:'🚪', name:'출입 기록', desc:'6개월간 20회 이상의 도박장 방문 기록'}
+    {icon:'🏦', name:'계좌 거래 내역', desc:'수백만원 단위의 반복적인 자금 이동', detail:{type:'forensic', title:'계좌 거래 내역 조회 결과', fields:[{label:'이체 패턴', value:'매주 2~3회, 회당 200~500만원'}, {label:'이체 상대방', value:'도박장 운영 조직 명의 계좌'}], conclusion:'단기간 반복적인 거액 이체로, 상습적인 도박 자금 흐름으로 판단됨.'}},
+    {icon:'🚪', name:'출입 기록', desc:'6개월간 20회 이상의 도박장 방문 기록', detail:{type:'forensic', title:'도박장 출입 기록 (압수 장부)', fields:[{label:'방문 횟수', value:'6개월간 23회'}, {label:'1회 평균 체류시간', value:'약 5시간'}], conclusion:'단발성 방문이 아닌 지속적·상습적으로 도박장을 이용한 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 46. Habitual Gambling',
@@ -4396,8 +4410,8 @@ const CASES = [
     },
     precedent:'Habitual gambling is typically sentenced anywhere from a fine to 1 year of imprisonment, depending on the scale and frequency of the wagers.',
     evidence:[
-      {icon:'🏦', name:'Account Transaction Records', desc:'Repeated fund transfers in the millions of won'},
-      {icon:'🚪', name:'Entry Records', desc:'Records of more than 20 visits to the gambling den over 6 months'}
+      {icon:'🏦', name:'Account Transaction Records', desc:'Repeated fund transfers in the millions of won', detail:{type:'forensic', title:'Bank Transaction Record Inquiry', fields:[{label:'Transfer pattern', value:'2-3 times weekly, 2,000,000-5,000,000 won each'}, {label:'Recipient', value:'An account tied to the gambling operation'}], conclusion:'Frequent, large transfers over a short period consistent with habitual gambling fund flow.'}},
+      {icon:'🚪', name:'Entry Records', desc:'Records of more than 20 visits to the gambling den over 6 months', detail:{type:'forensic', title:'Gambling Den Visitor Log (seized ledger)', fields:[{label:'Number of visits', value:'23 over 6 months'}, {label:'Average duration per visit', value:'About 5 hours'}], conclusion:'Confirms sustained, habitual use of the gambling den rather than a one-time visit.'}}
     ]
   }
 },
@@ -4426,8 +4440,8 @@ const CASES = [
   },
   precedent:'음주운전 사망사고는 혈중알코올농도와 피해 정도에 따라 통상 징역 3~10년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'🍶', name:'혈중알코올농도 기록', desc:'면허취소 수치를 크게 초과한 만취 상태'},
-    {icon:'📹', name:'블랙박스 영상', desc:'신호 무시 후 충돌하는 장면'}
+    {icon:'🍶', name:'혈중알코올농도 기록', desc:'면허취소 수치를 크게 초과한 만취 상태', detail:{type:'forensic', title:'혈중알코올농도 감정 결과', fields:[{label:'측정 수치', value:'0.15%'}, {label:'법적 기준', value:'면허취소 기준(0.08%)의 약 2배'}], conclusion:'정상적인 판단력과 반응 속도를 기대하기 어려운 만취 상태로 확인됨.'}},
+    {icon:'📹', name:'블랙박스 영상', desc:'신호 무시 후 충돌하는 장면', detail:{type:'cctv', timestamp:'사건 당일 23:40 — 사거리 교차로 블랙박스', caption:'피고인 차량이 적색 신호를 무시하고 그대로 진입해 횡단보도를 건너던 피해자를 충격하는 장면이 촬영됨.'}}
   ],
   en:{
     title:'Case 47. Fatal Reckless Driving (Drunk Driving Death)',
@@ -4449,8 +4463,8 @@ const CASES = [
     },
     precedent:'Drunk-driving death cases are typically sentenced to between 3 and 10 years of imprisonment, depending on blood alcohol content and the extent of harm.',
     evidence:[
-      {icon:'🍶', name:'Blood Alcohol Content Record', desc:'A state of heavy intoxication far exceeding the license-revocation threshold'},
-      {icon:'📹', name:'Dashcam Footage', desc:'Shows the collision after running the light'}
+      {icon:'🍶', name:'Blood Alcohol Content Record', desc:'A state of heavy intoxication far exceeding the license-revocation threshold', detail:{type:'forensic', title:'Blood Alcohol Concentration Report', fields:[{label:'Reading', value:'0.15%'}, {label:'Legal standard', value:'About twice the license-revocation threshold (0.08%)'}], conclusion:'A level of intoxication at which normal judgment and reaction time cannot reasonably be expected.'}},
+      {icon:'📹', name:'Dashcam Footage', desc:'Shows the collision after running the light', detail:{type:'cctv', timestamp:'23:40 on the day of the incident — Dashcam at an intersection', caption:'The defendant\'s vehicle is seen running a red light and striking the victim as they crossed at the crosswalk.'}}
     ]
   }
 },
@@ -4478,8 +4492,8 @@ const CASES = [
   },
   precedent:'유기죄는 위험 발생 정도와 유기 기간에 따라 통상 집행유예부터 징역 3년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📞', name:'이웃 신고 기록', desc:'수일간 연락 두절에 대한 신고 내역'},
-    {icon:'🏥', name:'진단 기록', desc:'발견 당시 위독했던 건강 상태'}
+    {icon:'📞', name:'이웃 신고 기록', desc:'수일간 연락 두절에 대한 신고 내역', detail:{type:'forensic', title:'이웃 신고 기록 (112 신고 이력)', fields:[{label:'신고 사유', value:'"며칠째 인기척이 없고 우편물이 쌓여있다"'}, {label:'신고일', value:'피해자 발견 이틀 전'}], conclusion:'주변에서 이미 이상 징후를 인지하고 있었으나 피고인은 별다른 조치를 취하지 않음.'}},
+    {icon:'🏥', name:'진단 기록', desc:'발견 당시 위독했던 건강 상태', detail:{type:'forensic', title:'구급 후송 당시 진단 기록', fields:[{label:'발견 당시 상태', value:'탈수 및 영양실조로 인한 의식 저하'}, {label:'소견', value:'최소 수일간 방치된 것으로 추정'}], conclusion:'거동이 불편한 상태에서 장기간 돌봄 없이 방치되었음을 뒷받침함.'}}
   ],
   en:{
     title:'Case 48. Abandonment',
@@ -4501,8 +4515,8 @@ const CASES = [
     },
     precedent:'Abandonment is typically sentenced anywhere from a suspended prison term to 3 years of imprisonment, depending on the degree of danger and the duration of the abandonment.',
     evidence:[
-      {icon:'📞', name:'Neighbor Complaint Records', desc:'Reports regarding several days of being unreachable'},
-      {icon:'🏥', name:'Medical Records', desc:'The critical health condition at the time the victim was found'}
+      {icon:'📞', name:'Neighbor Complaint Records', desc:'Reports regarding several days of being unreachable', detail:{type:'forensic', title:'Neighbor Report Log (emergency call history)', fields:[{label:'Reason', value:'"No sign of anyone for days, and mail is piling up."'}, {label:'Date filed', value:'Two days before the victim was found'}], conclusion:'Neighbors had already noticed signs of trouble, but the defendant took no action.'}},
+      {icon:'🏥', name:'Medical Records', desc:'The critical health condition at the time the victim was found', detail:{type:'forensic', title:'Medical Record at Time of Rescue', fields:[{label:'Condition found', value:'Impaired consciousness from dehydration and malnutrition'}, {label:'Findings', value:'Estimated to have been neglected for at least several days'}], conclusion:'Supports that a person with limited mobility was left without care for an extended period.'}}
     ]
   }
 },
@@ -4531,8 +4545,8 @@ const CASES = [
   },
   precedent:'유사 사건은 반포 범위와 피해 확산 정도에 따라 통상 집행유예부터 징역 3~5년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'💻', name:'프로그램 사용 기록', desc:'합성 이미지 제작 프로그램의 작업 로그'},
-    {icon:'💬', name:'채팅방 유포 캡처', desc:'다수 인원이 포함된 채팅방 전송 내역'}
+    {icon:'💻', name:'프로그램 사용 기록', desc:'합성 이미지 제작 프로그램의 작업 로그', detail:{type:'forensic', title:'프로그램 사용 기록 포렌식 분석 결과', fields:[{label:'사용 프로그램', value:'얼굴 합성 AI 애플리케이션'}, {label:'작업 로그', value:'피해자 SNS 사진 12장을 소스로 활용한 기록 확인'}], conclusion:'피해자의 얼굴을 성적 이미지에 합성하는 작업이 반복적으로 이루어진 정황이 기술적으로 확인됨.'}},
+    {icon:'💬', name:'채팅방 유포 캡처', desc:'다수 인원이 포함된 채팅방 전송 내역', detail:{type:'handwritten', text:'이거 내가 아는 애 얼굴로 합성한 건데 리얼하지 않냐 ㅋㅋ', source:'피고인이 익명 채팅방(참여자 27명)에 이미지와 함께 전송한 메시지'}}
   ],
   en:{
     title:'Case 49. Creating and Distributing Deepfake Sexual Content',
@@ -4554,8 +4568,8 @@ const CASES = [
     },
     precedent:'Similar cases are typically sentenced anywhere from a suspended prison term to 3-5 years of imprisonment, depending on the scope of distribution and extent of harm.',
     evidence:[
-      {icon:'💻', name:'Program Usage Log', desc:'A work log from the image-synthesis program'},
-      {icon:'💬', name:'Chat Room Distribution Capture', desc:'A record of transmission to a chat room with numerous participants'}
+      {icon:'💻', name:'Program Usage Log', desc:'A work log from the image-synthesis program', detail:{type:'forensic', title:'Forensic Analysis of Program Usage Logs', fields:[{label:'Software used', value:'An AI face-swapping application'}, {label:'Activity log', value:'Confirms 12 of the victim\'s social media photos were used as source material'}], conclusion:'Technical evidence confirms repeated work compositing the victim\'s face onto sexual imagery.'}},
+      {icon:'💬', name:'Chat Room Distribution Capture', desc:'A record of transmission to a chat room with numerous participants', detail:{type:'handwritten', text:'made this with a face I know lol looks real right', source:'A message the defendant sent along with the image in an anonymous chat room (27 members)'}}
     ]
   }
 },
@@ -4584,8 +4598,8 @@ const CASES = [
   },
   precedent:'영리 목적 불법촬영물 유포는 피해자 수와 확산 범위에 따라 통상 징역 3~8년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📹', name:'압수된 몰래카메라', desc:'화장실에서 발견되어 압수됨'},
-    {icon:'💰', name:'판매 사이트 계좌 내역', desc:'유료 회원 결제 대금 입금 기록'}
+    {icon:'📹', name:'압수된 몰래카메라', desc:'화장실에서 발견되어 압수됨', detail:{type:'forensic', title:'압수된 몰래카메라 감정 결과', fields:[{label:'설치 위치', value:'여자 화장실 환풍구 내부'}, {label:'저장 영상', value:'약 3개월분, 다수의 피해자 확인'}], conclusion:'장기간에 걸쳐 불특정 다수를 촬영할 목적으로 은밀하게 설치된 것으로 확인됨.'}},
+    {icon:'💰', name:'판매 사이트 계좌 내역', desc:'유료 회원 결제 대금 입금 기록', detail:{type:'forensic', title:'판매 사이트 계좌 내역', fields:[{label:'유료 회원 수', value:'약 850명'}, {label:'누적 결제액', value:'약 4,200만원'}], conclusion:'촬영물을 영리 목적으로 유료 사이트에 게시해 수익을 창출한 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 50. Distributing Illegally Filmed Content',
@@ -4607,8 +4621,8 @@ const CASES = [
     },
     precedent:'Distribution of illegally filmed content for profit is typically sentenced to between 3 and 8 years of imprisonment, depending on the number of victims and the extent of the spread.',
     evidence:[
-      {icon:'📹', name:'Seized Hidden Camera', desc:'Found and seized from the restroom'},
-      {icon:'💰', name:"Sales Site's Account Records", desc:'Records of payments from paying members'}
+      {icon:'📹', name:'Seized Hidden Camera', desc:'Found and seized from the restroom', detail:{type:'forensic', title:'Seized Hidden Camera Analysis', fields:[{label:'Installed at', value:'Inside a ventilation duct in a women\'s restroom'}, {label:'Footage stored', value:'About 3 months\' worth, multiple victims identified'}], conclusion:'Confirmed to have been covertly installed to film unspecified individuals over a long period.'}},
+      {icon:'💰', name:"Sales Site's Account Records", desc:'Records of payments from paying members', detail:{type:'forensic', title:'Sales Site Payment Records', fields:[{label:'Paying subscribers', value:'Approximately 850'}, {label:'Total revenue', value:'Approximately 42,000,000 won'}], conclusion:'Confirms the footage was posted to a paid site for profit.'}}
     ]
   }
 },
@@ -4637,8 +4651,8 @@ const CASES = [
   },
   precedent:'악성 프로그램 유포 및 금전 요구가 결합된 사건은 피해 규모에 따라 통상 징역 2~6년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'💻', name:'악성코드 분석 결과', desc:'유포된 랜섬웨어의 코드 구조 분석'},
-    {icon:'🪙', name:'암호화폐 지갑 거래내역', desc:'복구 대금으로 추정되는 입금 기록'}
+    {icon:'💻', name:'악성코드 분석 결과', desc:'유포된 랜섬웨어의 코드 구조 분석', detail:{type:'forensic', title:'악성코드 포렌식 분석 결과', fields:[{label:'분석 대상', value:'피해 기업 전산망에서 검출된 랜섬웨어'}, {label:'코드 특징', value:'피고인의 다른 컴퓨터에서 발견된 개발 중 버전과 코드 구조 일치'}], conclusion:'피고인이 해당 랜섬웨어의 제작·유포 당사자임을 뒷받침하는 기술적 증거로 확인됨.'}},
+    {icon:'🪙', name:'암호화폐 지갑 거래내역', desc:'복구 대금으로 추정되는 입금 기록', detail:{type:'forensic', title:'암호화폐 지갑 거래내역 조회 결과', fields:[{label:'입금 시점', value:'각 피해 기업의 복구 대금 지불 직후'}, {label:'지갑 소유자', value:'피고인 명의로 특정됨'}], conclusion:'피해 기업들의 지불 시점과 지갑 입금 시점이 정확히 일치함.'}}
   ],
   en:{
     title:'Case 51. Distributing Ransomware',
@@ -4660,8 +4674,8 @@ const CASES = [
     },
     precedent:'Cases combining malware distribution with monetary demands are typically sentenced to between 2 and 6 years of imprisonment, depending on the scale of the damage.',
     evidence:[
-      {icon:'💻', name:'Malware Analysis Report', desc:"An analysis of the distributed ransomware's code structure"},
-      {icon:'🪙', name:'Cryptocurrency Wallet Transaction History', desc:'Deposit records believed to be ransom payments'}
+      {icon:'💻', name:'Malware Analysis Report', desc:"An analysis of the distributed ransomware's code structure", detail:{type:'forensic', title:'Forensic Analysis of the Malware', fields:[{label:'Sample', value:'Ransomware detected on the affected companies\' networks'}, {label:'Code characteristics', value:'Matches a development version found on the defendant\'s own computer'}], conclusion:'Technical evidence confirms the defendant authored and distributed the ransomware.'}},
+      {icon:'🪙', name:'Cryptocurrency Wallet Transaction History', desc:'Deposit records believed to be ransom payments', detail:{type:'forensic', title:'Crypto Wallet Transaction Inquiry', fields:[{label:'Deposits', value:'Immediately after each affected company paid the ransom'}, {label:'Wallet owner', value:'Identified as the defendant'}], conclusion:'The timing of each company\'s payment matches the wallet deposits exactly.'}}
     ]
   }
 },
@@ -4690,8 +4704,8 @@ const CASES = [
   },
   precedent:'마약류 수입죄는 수입 규모와 조직적 개입 정도에 따라 통상 징역 10~20년 또는 무기징역까지 선고되는 매우 중한 범죄입니다.',
   evidence:[
-    {icon:'📦', name:'세관 적발 물품', desc:'국제우편으로 위장된 향정신성의약품'},
-    {icon:'🌐', name:'다크웹 접속 기록', desc:'암호화폐 결제 및 주문 내역'}
+    {icon:'📦', name:'세관 적발 물품', desc:'국제우편으로 위장된 향정신성의약품', detail:{type:'forensic', title:'세관 적발 물품 감정 결과', fields:[{label:'품목', value:'건강보조식품으로 위장한 향정신성의약품'}, {label:'중량', value:'약 200g'}], conclusion:'포장 및 표기가 정상 건강식품과 매우 유사하게 위장되어 있었음.'}},
+    {icon:'🌐', name:'다크웹 접속 기록', desc:'암호화폐 결제 및 주문 내역', detail:{type:'forensic', title:'다크웹 접속 기록 포렌식 분석', fields:[{label:'접속 경로', value:'특수 익명화 브라우저 경유'}, {label:'거래 내역', value:'암호화폐로 결제한 주문 내역 다수 확인'}], conclusion:'동일한 방식으로 수차례 반복 주문한 정황이 확인됨.'}}
   ],
   en:{
     title:'Case 52. Drug Smuggling via the Dark Web',
@@ -4713,8 +4727,8 @@ const CASES = [
     },
     precedent:'Importation of narcotics is a very serious offense typically sentenced to between 10 and 20 years of imprisonment, or even life imprisonment, depending on the scale of importation and degree of organized involvement.',
     evidence:[
-      {icon:'📦', name:'Items Seized by Customs', desc:'Psychotropic substances disguised as international mail'},
-      {icon:'🌐', name:'Dark Web Access Logs', desc:'Cryptocurrency payment and order records'}
+      {icon:'📦', name:'Items Seized by Customs', desc:'Psychotropic substances disguised as international mail', detail:{type:'forensic', title:'Customs Seizure Analysis', fields:[{label:'Item', value:'A psychotropic substance disguised as a health supplement'}, {label:'Weight', value:'Approx. 200g'}], conclusion:'Packaging and labeling were made to closely resemble a legitimate health product.'}},
+      {icon:'🌐', name:'Dark Web Access Logs', desc:'Cryptocurrency payment and order records', detail:{type:'forensic', title:'Forensic Analysis of Dark Web Access Logs', fields:[{label:'Access method', value:'Via a specialized anonymizing browser'}, {label:'Transactions', value:'Multiple orders confirmed, paid in cryptocurrency'}], conclusion:'Confirms a pattern of repeated orders made the same way.'}}
     ]
   }
 },
@@ -4743,8 +4757,8 @@ const CASES = [
   },
   precedent:'로맨스 스캠형 사기는 편취 금액과 계획성 정도에 따라 통상 징역 2~5년 사이에서 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📱', name:'위장 프로필 자료', desc:'도용된 사진과 허위 신상 정보'},
-    {icon:'🏦', name:'계좌 이체 내역', desc:'총 8천만원의 송금 및 사용처 기록'}
+    {icon:'📱', name:'위장 프로필 자료', desc:'도용된 사진과 허위 신상 정보', detail:{type:'forensic', title:'위장 프로필 자료 분석 결과', fields:[{label:'프로필 사진', value:'해외 유명 배우 사진 도용'}, {label:'신상 정보', value:'실존하지 않는 해외 의사 경력 기재'}], conclusion:'SNS상의 신원 정보가 전부 허위로 확인됨.'}},
+    {icon:'🏦', name:'계좌 이체 내역', desc:'총 8천만원의 송금 및 사용처 기록', detail:{type:'forensic', title:'계좌 이체 내역 및 사용처 조회 결과', fields:[{label:'총 송금액', value:'8,000만원'}, {label:'사용처', value:'대부분 개인 유흥비 및 차량 구매'}], conclusion:'피해자가 주장한 "사업 자금", "병원비" 등의 용도와 실제 사용처가 전혀 일치하지 않음.'}}
   ],
   en:{
     title:'Case 53. Romance Scam',
@@ -4766,8 +4780,8 @@ const CASES = [
     },
     precedent:'Romance-scam fraud is typically sentenced to between 2 and 5 years of imprisonment, depending on the amount taken and the degree of premeditation.',
     evidence:[
-      {icon:'📱', name:'Fake Profile Materials', desc:'The stolen photo and false personal information'},
-      {icon:'🏦', name:'Account Transfer Records', desc:'Records of 80 million won transferred and how it was used'}
+      {icon:'📱', name:'Fake Profile Materials', desc:'The stolen photo and false personal information', detail:{type:'forensic', title:'Fake Profile Analysis', fields:[{label:'Profile photo', value:'Stolen photo of a well-known foreign actor'}, {label:'Background claimed', value:'A fabricated career as a doctor abroad'}], conclusion:'All identity information on the social media profile is confirmed false.'}},
+      {icon:'🏦', name:'Account Transfer Records', desc:'Records of 80 million won transferred and how it was used', detail:{type:'forensic', title:'Bank Transfer and Fund Use Inquiry', fields:[{label:'Total sent', value:'80,000,000 won'}, {label:'Actual use', value:'Mostly personal entertainment expenses and a vehicle purchase'}], conclusion:'The claimed purposes ("business funds," "hospital bills") do not match how the money was actually spent at all.'}}
     ]
   }
 },
@@ -4796,8 +4810,8 @@ const CASES = [
   },
   precedent:'유사 사건은 기소 자체가 드물며, 기소되더라도 대부분 무죄나 공소기각으로 종결됩니다.',
   evidence:[
-    {icon:'🐕', name:'옆집 개 소음 기록', desc:'피고인의 "성대모사" 이후 짖는 빈도가 감소한 기록'},
-    {icon:'📋', name:'민원 접수 내역', desc:'초기 놀람으로 인한 신고 1건, 이후 추가 신고 없음'}
+    {icon:'🐕', name:'옆집 개 소음 기록', desc:'피고인의 "성대모사" 이후 짖는 빈도가 감소한 기록', detail:{type:'forensic', title:'옆집 개 소음 변화 기록 (동물행동 상담사 소견 포함)', fields:[{label:'이전', value:'하루 평균 15회 이상 짖음'}, {label:'피고인의 성대모사 이후', value:'하루 평균 2회 미만으로 감소'}], conclusion:'오히려 소음을 줄이는 효과가 있었던 것으로 관찰됨.'}},
+    {icon:'📋', name:'민원 접수 내역', desc:'초기 놀람으로 인한 신고 1건, 이후 추가 신고 없음', detail:{type:'forensic', title:'민원 접수 내역 조회 결과', fields:[{label:'총 접수 건수', value:'1건 (최초 발생 당시)'}, {label:'추가 민원', value:'없음'}], conclusion:'최초의 놀람에 의한 신고 이후로는 추가 민원이 전혀 접수되지 않음.'}}
   ],
   en:{
     title:'Case 54. The Impersonation Duel with the Neighbor\'s Dog',
@@ -4819,8 +4833,8 @@ const CASES = [
     },
     precedent:'Similar cases are rarely prosecuted at all, and when they are, they almost always end in acquittal or dismissal.',
     evidence:[
-      {icon:'🐕', name:"Neighbor's Dog Noise Log", desc:"A record showing reduced barking frequency after the defendant's \"impersonations\""},
-      {icon:'📋', name:'Complaint Records', desc:'One report filed out of initial surprise, with no further complaints afterward'}
+      {icon:'🐕', name:"Neighbor's Dog Noise Log", desc:"A record showing reduced barking frequency after the defendant's \"impersonations\"", detail:{type:'forensic', title:'Change in the Neighbor\'s Dog Barking (with animal-behavior consultant opinion)', fields:[{label:'Before', value:'Over 15 barking incidents per day on average'}, {label:'After the defendant\'s impression', value:'Fewer than 2 per day on average'}], conclusion:'Observed to have actually reduced the noise, if anything.'}},
+      {icon:'📋', name:'Complaint Records', desc:'One report filed out of initial surprise, with no further complaints afterward', detail:{type:'forensic', title:'Complaint Log Inquiry', fields:[{label:'Total complaints filed', value:'1 (at the initial occurrence)'}, {label:'Further complaints', value:'None'}], conclusion:'No further complaints were filed after the initial one prompted by surprise.'}}
     ]
   }
 },
@@ -4849,8 +4863,8 @@ const CASES = [
   },
   precedent:'유사 사건은 대부분 기소조차 되지 않으며, 기소되더라도 업무방해죄의 구성요건 미충족으로 무죄가 선고되는 경우가 많습니다.',
   evidence:[
-    {icon:'📋', name:'매장 메뉴판', desc:'"1인 무제한 리필, 시간 제한 없음"이라고 명시됨'},
-    {icon:'🍖', name:'주문 내역', desc:'2인분 가격으로 정상 결제된 영수증'}
+    {icon:'📋', name:'매장 메뉴판', desc:'"1인 무제한 리필, 시간 제한 없음"이라고 명시됨', detail:{type:'handwritten', text:'1인 무제한 리필, 시간 제한 없음. (단, 잔반 시 별도 요금)', source:'매장 입구에 게시된 메뉴판 문구 원본'}},
+    {icon:'🍖', name:'주문 내역', desc:'2인분 가격으로 정상 결제된 영수증', detail:{type:'forensic', title:'결제 내역 영수증', fields:[{label:'결제 금액', value:'2인분 가격'}, {label:'잔반 여부', value:'없음 (전량 섭취 확인)'}], conclusion:'메뉴판 안내 조건을 위반한 사실이 없으며, 정상적으로 결제가 완료됨.'}}
   ],
   en:{
     title:'Case 55. The All-You-Can-Eat Owner\'s Tears',
@@ -4872,8 +4886,8 @@ const CASES = [
     },
     precedent:'Similar cases are rarely even prosecuted, and when they are, they typically end in acquittal for failing to meet the elements of obstruction of business.',
     evidence:[
-      {icon:'📋', name:'Restaurant Menu', desc:'States "unlimited refills per person, no time limit"'},
-      {icon:'🍖', name:'Order Record', desc:'A receipt showing normal payment for two servings'}
+      {icon:'📋', name:'Restaurant Menu', desc:'States "unlimited refills per person, no time limit"', detail:{type:'handwritten', text:'All-you-can-eat per person, no time limit. (Separate charge applies for leftovers.)', source:'The original wording posted on the menu board at the restaurant entrance'}},
+      {icon:'🍖', name:'Order Record', desc:'A receipt showing normal payment for two servings', detail:{type:'forensic', title:'Payment Receipt', fields:[{label:'Amount paid', value:'Price for 2 servings'}, {label:'Leftovers', value:'None (fully consumed)'}], conclusion:'No violation of the posted menu terms occurred, and payment was completed normally.'}}
     ]
   }
 }
@@ -5781,6 +5795,17 @@ function confirmYears(){
   proceedToExtras(pendingPrimaryType, selectedYears);
 }
 
+/* 스페이스바로 대사 넘기기 (텍스트 입력 중이거나 다른 패널이 떠 있을 때는 무시) */
+document.addEventListener('keydown', (e)=>{
+  if(e.code !== 'Space' && e.key !== ' ') return;
+  const active = document.activeElement;
+  if(active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA')) return;
+  const box = el('dialogueBox');
+  if(box && box.style.display==='block' && typeof box.onclick==='function'){
+    e.preventDefault();
+    box.onclick();
+  }
+});
 document.addEventListener('keydown', (e)=>{
   if(el('yearsPanel').style.display !== 'flex') return;
   if(e.key >= '0' && e.key <= '9'){
@@ -6135,10 +6160,15 @@ function showSettings(){
     <div class="btnrow">
       <button class="btn secondary small" onclick="changeJudgeNamePrompt(showSettings)">${tr('이름 변경','Change Name')}</button>
     </div>
-    <p style="font-size:11px;margin-top:16px;">${tr('음량','Volume')}: <span id="volumeValueLabel">${Math.round(settings.masterVolume*100)}</span>%</p>
+    <p style="font-size:11px;margin-top:16px;">${tr('전체 음량','Master Volume')}: <span id="volumeValueLabel">${Math.round(settings.masterVolume*100)}</span>%</p>
     <div class="btnrow">
       <input type="range" min="0" max="100" value="${Math.round(settings.masterVolume*100)}" class="volume-slider"
         oninput="document.getElementById('volumeValueLabel').textContent=this.value; setMasterVolume(this.value);">
+    </div>
+    <p style="font-size:11px;margin-top:16px;">${tr('음악(BGM) 음량','Music (BGM) Volume')}: <span id="musicVolumeValueLabel">${Math.round(settings.musicVolume*100)}</span>%</p>
+    <div class="btnrow">
+      <input type="range" min="0" max="100" value="${Math.round(settings.musicVolume*100)}" class="volume-slider"
+        oninput="document.getElementById('musicVolumeValueLabel').textContent=this.value; setMusicVolume(this.value);">
     </div>
     <p style="font-size:11px;margin-top:16px;">${t('settingsSpeed')}</p>
     <div class="btnrow">
@@ -7279,7 +7309,7 @@ el('yearsConfirm').addEventListener('click', confirmYears);
 el('muteBtn').addEventListener('click', ()=>{
   muted = !muted;
   el('muteBtn').textContent = muted? ('🔇 ' + t('muteOff')) : ('🔊 ' + t('muteOn'));
-  if(ambientNoiseGain) ambientNoiseGain.gain.value = muted? 0 : 0.022*settings.masterVolume;
+  if(ambientNoiseGain) ambientNoiseGain.gain.value = muted? 0 : 0.022*musicVol();
   if(muted){
     stopTitleTheme();
     stopRealTracks();

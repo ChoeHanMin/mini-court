@@ -180,6 +180,16 @@
   #dockStand{left:50%;transform:translateX(-50%);width:110px;height:30%;bottom:6%;}
   #prosStand{right:6%;}
   #defStand{left:6%;}
+  /* 피고인 난동 시 양옆에서 슥 나타났다가, 진정되면 슥 사라지는 법원 경위 */
+  .bailiff-holder{
+    position:absolute; bottom:6%; width:70px; height:150px;
+    opacity:0; pointer-events:none; z-index:3;
+    transition:opacity .45s ease, transform .45s ease;
+  }
+  .bailiff-holder canvas{ width:100%; height:100%; image-rendering:pixelated; filter:drop-shadow(0 4px 3px rgba(0,0,0,0.5)); }
+  .bailiff-holder.left{ left:calc(50% - 130px); transform:translateX(-25px) scale(0.94); }
+  .bailiff-holder.right{ left:calc(50% + 60px); transform:translateX(25px) scale(0.94); }
+  .bailiff-holder.show{ opacity:1; transform:translateX(0) scale(1); }
   .stand-label{
     position:absolute;top:6px;left:50%;transform:translateX(-50%);
     font-size:7.5px;color:var(--brass);letter-spacing:1.5px;
@@ -469,6 +479,43 @@
     75%{ transform:perspective(220px) rotateY(-10deg) skewY(-1deg); }
   }
   .title-layout{ position:relative; z-index:1; }
+  /* 메인화면 뒤에서 조금씩 움직이는 법정 배경 (실제 법정 사진 4장을 교차
+     페이드 + 느린 줌으로 순환). 버튼/텍스트는 title-layout(z-index:1)이
+     그 위에 그대로 있어 가독성에 영향 없음 */
+  .title-bg-cycle{
+    position:absolute; inset:0; z-index:0; overflow:hidden;
+  }
+  .title-bg-frame{
+    position:absolute; inset:0;
+    background-size:cover; background-position:center;
+    opacity:0; will-change:opacity, transform;
+    animation:titleBgCycle 32s ease-in-out infinite, titleBgKen 32s ease-in-out infinite;
+  }
+  .title-bg-frame:nth-child(1){ animation-delay:0s, 0s; }
+  .title-bg-frame:nth-child(2){ animation-delay:-8s, -8s; }
+  .title-bg-frame:nth-child(3){ animation-delay:-16s, -16s; }
+  .title-bg-frame:nth-child(4){ animation-delay:-24s, -24s; }
+  @keyframes titleBgCycle{
+    0%{opacity:0;} 3%{opacity:1;} 22%{opacity:1;} 28%{opacity:0;} 100%{opacity:0;}
+  }
+  @keyframes titleBgKen{
+    0%{transform:scale(1.04) translate(0,0);}
+    50%{transform:scale(1.11) translate(-0.6%,0.5%);}
+    100%{transform:scale(1.04) translate(0,0);}
+  }
+  .title-bg-scrim{
+    position:absolute; inset:0; z-index:0;
+    background:linear-gradient(180deg, rgba(8,5,3,0.8) 0%, rgba(8,5,3,0.7) 40%, rgba(8,5,3,0.88) 100%);
+  }
+  .title-layout p, .title-layout .title-levelinfo, .title-layout .title-judgestatus{
+    text-shadow:0 1px 4px rgba(0,0,0,0.9);
+  }
+  #stage.high-contrast .title-bg-cycle,
+  #stage.high-contrast .title-bg-scrim{ display:none; }
+  @media (prefers-reduced-motion: reduce){
+    .title-bg-frame{ animation:none; opacity:0; transform:none; }
+    .title-bg-frame:first-child{ opacity:1; }
+  }
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
     width:100%;max-width:320px;text-align:left;background:rgba(0,0,0,0.25);
@@ -618,6 +665,7 @@
   /* 부가형(몰수/자격정지 등) 선택 패널 - flex-direction이 없어 가로로
      한 줄에 뭉쳐 보이던 문제를 고쳐 세로로 정확히 쌓이게 함 */
   #extrasPanel{display:none;flex-direction:column;align-items:center;width:100%;margin-top:6px;}
+  #suspendedPanel{display:none;flex-direction:column;align-items:center;width:100%;margin-top:6px;}
   #extrasOptions{width:100%;max-width:360px;}
   .extraOption{
     display:flex;align-items:flex-start;gap:10px;font-size:12px;text-align:left;
@@ -676,6 +724,9 @@
     .stand-label{ font-size:12px!important; padding:3px 10px; }
     #dockStand{ width:200px; }
     .stand{ width:150px; }
+    .bailiff-holder{ width:100px; height:210px; }
+    .bailiff-holder.left{ left:calc(50% - 195px); }
+    .bailiff-holder.right{ left:calc(50% + 100px); }
     .sprite-holder canvas{ transform:scale(calc(var(--build-scale,1) * 2.1)); transform-origin:bottom center; }
     /* 와이드 화면에서는 HUD 아래 붙는 전체폭 바 대신, HUD 줄 안(사건명-시민의심 사이)의
        작은 바로 전환 (모바일에서 겹침 없이 그대로 유지하기 위해 기본값은 위에서 absolute) */
@@ -814,6 +865,8 @@
     <div class="stand" id="dockStand"><div class="stand-label" id="standLabelDefendant">피고인</div>
       <div class="sprite-holder" id="holder-defendant"><canvas class="pixel" id="c-defendant" width="126" height="180"></canvas></div>
     </div>
+    <div class="bailiff-holder left" id="bailiffLeft"><canvas class="pixel" id="c-bailiffLeft" width="90" height="150"></canvas></div>
+    <div class="bailiff-holder right" id="bailiffRight"><canvas class="pixel" id="c-bailiffRight" width="90" height="150"></canvas></div>
   </div>
 
   <div id="dialogueBox" class="clickable">
@@ -853,6 +906,15 @@
       </div>
     </div>
 
+    <div id="suspendedPanel" style="display:none;">
+      <div class="sub" id="suspendedSub">집행유예의 세부 내용을 정하세요.</div>
+      <div id="suspendedBody" style="width:100%;"></div>
+      <div class="rowbtns">
+        <button class="btn secondary" id="suspendedBack">뒤로</button>
+        <button class="btn" id="suspendedConfirm">선고 확정</button>
+      </div>
+    </div>
+
     <div id="extrasPanel" style="display:none;">
       <div class="sub" id="extrasSub">부가형을 함께 선고할 수 있습니다 (중복 선택 가능)</div>
       <div id="extrasOptions" style="display:flex;flex-direction:column;gap:8px;margin:10px 0;"></div>
@@ -879,10 +941,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.15.0.0
+   미니법정(Mini Court)  ver 1.16.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.15.0.0';
+const GAME_VERSION = '1.16.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1923,6 +1985,15 @@ function drawSprite(canvasId, palette, opts){
       }
     }
   }
+  if(opts.cap){
+    /* 법원 경위 정모(모자): 머리 위쪽을 진한 감색으로 덮고, 이마 위에
+       챙(브림) 한 줄을 그려 모자를 쓴 것처럼 보이게 함 */
+    const capColor = opts.capColor || '#161b28';
+    for(let r=0;r<=3;r++){ for(let c=6;c<=21;c++){ if(colorGrid[r][c]!=null) colorGrid[r][c] = capColor; } }
+    for(let c=8;c<=19;c++){ if(colorGrid[4][c]!=null) colorGrid[4][c] = '#0c0e16'; }
+    if(colorGrid[1][13]!=null) colorGrid[1][13] = '#c9a24b';
+    if(colorGrid[1][14]!=null) colorGrid[1][14] = '#c9a24b';
+  }
   applyMood(colorGrid, opts.mood);
 
   const outline = [];
@@ -2045,6 +2116,7 @@ function koreanSubjectParticle(str){
 function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomBuildScale(){ return (0.88 + Math.random()*0.4).toFixed(2); }
 function randomizeAppearance(){
+  hideBailiffs(); /* 새 사건 시작 시, 이전 사건에서 등장했을 수 있는 경위를 확실히 원위치 */
   state.rolePalettes = {
     defendant:{
       hair:pickFrom(APPEARANCE_POOLS.hair), skin:pickFrom(APPEARANCE_POOLS.skin),
@@ -2136,18 +2208,50 @@ function computeScore(type, years){
     default: return 3;
   }
 }
+/* 개월수를 "1년 6개월"/"8개월"/"2년" 형태로 표시 (집행유예의 기본형 표시용) */
+function monthsLabel(m){
+  const y = Math.floor(m/12), mo = m%12;
+  if(y>0 && mo>0) return tr(`${y}년 ${mo}개월`, `${y}yr ${mo}mo`);
+  if(y>0) return tr(`${y}년`, `${y}yr`);
+  return tr(`${mo}개월`, `${mo}mo`);
+}
 function verdictLabel(type, years, extras){
   let base;
   if(type==='징역' || type==='금고') base = `${tv(type)} ${years}${tr('년','yr')}`;
+  else if(type==='집행유예' && extras && extras.suspendedBaseMonths){
+    /* 형법 제62조: 집행유예는 반드시 그 대상이 되는 기본형(징역/금고)과
+       유예기간(1~5년)이 함께 선고되어야 함. 예: "징역 1년, 집행유예 2년" */
+    base = tr(
+      `징역 ${monthsLabel(extras.suspendedBaseMonths)}, 집행유예 ${extras.suspendedYears}년`,
+      `Imprisonment for ${monthsLabel(extras.suspendedBaseMonths)}, suspended for ${extras.suspendedYears} yr${extras.suspendedYears>1?'s':''}`
+    );
+  }
   else base = tv(type);
   if(extras){
     const add = [];
+    /* 형법 제62조의2: 집행유예 시 보호관찰·사회봉사명령·수강명령을 함께
+       명할 수 있음 (중복 부가 가능) */
+    if(extras.probation) add.push(tr(`보호관찰 ${extras.suspendedYears||''}년`.trim(), `Probation${extras.suspendedYears?` ${extras.suspendedYears} yr${extras.suspendedYears>1?'s':''}`:''}`.trim()));
+    if(extras.communityHours) add.push(tr(`사회봉사 ${extras.communityHours}시간`, `Community Service ${extras.communityHours}h`));
+    if(extras.educationHours) add.push(tr(`${extras.educationProgram ? extras.educationProgram.ko : '수강명령'} ${extras.educationHours}시간`, `${extras.educationProgram ? extras.educationProgram.en : 'Education Order'} ${extras.educationHours}h`));
     if(extras.forfeiture) add.push(tr('몰수','Forfeiture'));
     if(extras.suspend) add.push(tr('자격정지','Suspension of Qualification'));
     if(extras.revoke) add.push(tr('자격상실','Loss of Qualification'));
     if(add.length) base += ' + ' + add.join(' + ');
   }
   return base;
+}
+/* 사건 성격에 맞는 수강명령 프로그램을 추천 (음주운전→준법운전강의,
+   성범죄→성폭력 치료프로그램 등). 형법 제62조의2 3항은 유형에 맞는
+   수강명령 내용을 법원이 정하도록 하고 있음 */
+function suggestedEducationProgram(c){
+  if(!c) return {ko:'준법의식강의', en:'Law-Abiding Awareness Lecture'};
+  const hay = [c.charge, c.title, c.tag].filter(Boolean).join(' ');
+  if(/음주운전|음주\s*측정/.test(hay)) return {ko:'준법운전강의', en:'Lawful Driving Education'};
+  if(/성폭행|성추행|성폭력|카메라등이용촬영|디지털\s*성범죄|몰카|스토킹/.test(hay)) return {ko:'성폭력 치료프로그램', en:'Sexual Violence Treatment Program'};
+  if(/마약|필로폰|대마|졸피뎀/.test(hay)) return {ko:'마약류 재범방지교육', en:'Drug Relapse Prevention Program'};
+  if(/폭행|상해|협박|공갈|손괴|난동/.test(hay)) return {ko:'폭력예방강의', en:'Violence Prevention Lecture'};
+  return {ko:'준법의식강의', en:'Law-Abiding Awareness Lecture'};
 }
 
 /* ================= Flavor pools ================= */
@@ -6424,6 +6528,8 @@ function showDialogue(item, cb){
     redrawRole('defendant', item.defendantMood);
   }
   if(item.sfx) playCrowdReaction(item.sfx);
+  if(item.bailiffs==='show') showBailiffs();
+  else if(item.bailiffs==='hide') hideBailiffs();
   if(item.shake){
     const stageEl = el('stage');
     stageEl.classList.remove('shake');
@@ -6635,6 +6741,26 @@ function spawnObjectionBanner(){
   setTimeout(()=>{ if(div.parentNode) div.remove(); }, 1300);
 }
 
+/* ================= 법원 경위 (피고인 난동 시 양옆에서 등장) =================
+   기존 캐릭터 스프라이트 시스템(drawSprite)을 그대로 재사용하되, 짙은 감색
+   경위 제복 팔레트와 정모(cap) 옵션을 새로 만들어 적용함 */
+const BAILIFF_PALETTE = {hair:'#241a14', skin:'#dcb28c', outfit:'#20263a', accent:'#0c0e16', collar:'#3a4258', accent2:'#c9a24b'};
+function drawBailiff(canvasId){
+  drawSprite(canvasId, BAILIFF_PALETTE, {cap:true, wideRobe:false, mood:'neutral'});
+}
+function showBailiffs(){
+  drawBailiff('c-bailiffLeft');
+  drawBailiff('c-bailiffRight');
+  const l = el('bailiffLeft'), r = el('bailiffRight');
+  if(l) l.classList.add('show');
+  if(r) r.classList.add('show');
+}
+function hideBailiffs(){
+  const l = el('bailiffLeft'), r = el('bailiffRight');
+  if(l) l.classList.remove('show');
+  if(r) r.classList.remove('show');
+}
+
 /* ================= 피고인 법정 난동 이벤트 ================= */
 const OUTBURST_LINES = [
   {ko:'그만! 다 거짓말이야! 나는 죄가 없다고!!', en:"Stop! It's all lies! I'm not guilty!!"},
@@ -6646,7 +6772,7 @@ function buildOutburstEvent(){
   const NM = t('narratorLabel'), DFT = t('defendantLabel');
   const pick = OUTBURST_LINES[Math.floor(Math.random()*OUTBURST_LINES.length)];
   return [
-    {type:'narrator', name:NM, text:tr('갑자기 피고인이 자리에서 벌떡 일어나며 소리를 지르고 난동을 피웁니다!','Suddenly, the defendant leaps to their feet, shouting and causing an uproar!'), who:'defendant', defendantMood:'angry', sfx:'gasp', shake:true, bgmMood:'tense'},
+    {type:'narrator', name:NM, text:tr('갑자기 피고인이 자리에서 벌떡 일어나며 소리를 지르고 난동을 피웁니다!','Suddenly, the defendant leaps to their feet, shouting and causing an uproar!'), who:'defendant', defendantMood:'angry', sfx:'gasp', shake:true, bgmMood:'tense', bailiffs:'show'},
     {type:'defendant', name:DFT, text:tr(pick.ko, pick.en), who:'defendant', mood:'angry', shake:true},
     {type:'choice', choiceType:'outburst', bgmMood:'tense',
       prompt: tr('피고인이 법정 질서를 어지럽혔습니다. 어떻게 대응하시겠습니까?','The defendant has disrupted order in the courtroom. How do you respond?'),
@@ -6660,9 +6786,42 @@ function buildOutburstEvent(){
 function buildOutburstAftermath(choiceKey){
   const NM = t('narratorLabel');
   if(choiceKey==='punish'){
-    return [{type:'narrator', name:NM, text:tr('법원 경위가 피고인을 제지하는 가운데, 재판장은 법정 모욕에 대해 추가 감치 처분을 명령합니다.','As bailiffs restrain the defendant, the judge orders additional custody for contempt of court.'), who:'defendant', defendantMood:'distressed', shift:2}];
+    return [{type:'narrator', name:NM, text:tr('법원 경위가 피고인을 제지하는 가운데, 재판장은 법정 모욕에 대해 추가 감치 처분을 명령합니다.','As bailiffs restrain the defendant, the judge orders additional custody for contempt of court.'), who:'defendant', defendantMood:'distressed', shift:2, bailiffs:'hide'}];
   }
-  return [{type:'narrator', name:NM, text:tr('재판장의 근엄한 경고에 피고인은 겨우 진정하고 다시 자리에 앉습니다.',"At the judge's stern warning, the defendant finally calms down and sits back down."), who:'defendant', defendantMood:'worried', shift:-1}];
+  return [{type:'narrator', name:NM, text:tr('재판장의 근엄한 경고에 피고인은 겨우 진정하고 다시 자리에 앉습니다.',"At the judge's stern warning, the defendant finally calms down and sits back down."), who:'defendant', defendantMood:'worried', shift:-1, bailiffs:'hide'}];
+}
+
+/* ================= 재차 난동: 구두 경고에도 불구하고 다시 소란을 피움 =================
+   요청: "피고인이 난동을 피워 한차례 구두경고를 줬음에도 또 난동을 피우는
+   돌발상황을 만들어줘." 첫 난동에서 '구두 경고'를 택했을 때만 일어날 수 있는
+   후속 이벤트. 이번엔 이미 한 번 경고했다는 사실이 대사에 반영되고, 선택지도
+   퇴정명령까지 포함해 한층 무거워짐 */
+const OUTBURST2_LINES = [
+  {ko:'경고 따위 상관없어요! 저는 절대 인정할 수 없습니다!!', en:"I don't care about your warning! I will never accept this!!"},
+  {ko:'또 왜요! 이 재판 자체가 저를 죽이려는 거잖아요!!', en:"What now?! This whole trial is out to destroy me!!"},
+  {ko:'그만하라고 했잖아!! 한 번 봐줬으면 됐지, 왜 또!!', en:"I said stop already!! You let it go once, why again?!"}
+];
+function buildOutburstEscalation(){
+  const NM = t('narratorLabel'), DFT = t('defendantLabel');
+  const pick = OUTBURST2_LINES[Math.floor(Math.random()*OUTBURST2_LINES.length)];
+  return [
+    {type:'narrator', name:NM, text:tr('재판장의 구두 경고가 무색하게, 피고인이 또다시 자리를 박차고 일어나 격렬하게 소리칩니다!','Ignoring the judge\'s earlier warning entirely, the defendant leaps up again and shouts furiously!'), who:'defendant', defendantMood:'angry', sfx:'gasp', shake:true, bgmMood:'tense', bailiffs:'show'},
+    {type:'defendant', name:DFT, text:tr(pick.ko, pick.en), who:'defendant', mood:'angry', shake:true},
+    {type:'choice', choiceType:'outburst2', bgmMood:'tense',
+      prompt: tr('이미 한 차례 경고했음에도 피고인이 다시 난동을 피웠습니다. 어떻게 대응하시겠습니까?','Despite an earlier warning, the defendant has caused another disturbance. How do you respond?'),
+      options:[
+        {label:'🚪 '+tr('퇴정을 명하고 감치 처분한다','Order removal from the courtroom and impose custody'), key:'remove'},
+        {label:'🗣️ '+tr('이번이 마지막이라며 다시 경고한다','Warn once more, making clear this is the last time'), key:'warnAgain'}
+      ]
+    }
+  ];
+}
+function buildOutburstEscalationAftermath(choiceKey){
+  const NM = t('narratorLabel');
+  if(choiceKey==='remove'){
+    return [{type:'narrator', name:NM, text:tr('법원 경위들이 피고인을 법정 밖으로 데리고 나가는 가운데, 재판장은 거듭된 법정 모욕에 대해 감치 처분을 명령합니다.','As bailiffs escort the defendant out of the courtroom, the judge orders custody for the repeated contempt of court.'), who:'defendant', defendantMood:'distressed', shift:3, bailiffs:'hide'}];
+  }
+  return [{type:'narrator', name:NM, text:tr('재판장의 마지막 경고에 피고인은 가까스로 흥분을 가라앉히고 다시 자리에 앉습니다.',"At the judge's final warning, the defendant barely manages to calm down and sits back down."), who:'defendant', defendantMood:'worried', shift:-1, bailiffs:'hide'}];
 }
 
 /* ================= 돌발 이벤트: 갑작스러운 증인 등장 ================= */
@@ -6838,6 +6997,7 @@ function nextCase(){
   state.currentCase = c;
   state._appealUsed = false;
   state._contemptPunish = false;
+  state._outburstEscalated = false;
   state._caseStartTime = Date.now();
   c._acceptedEvidenceIdx = []; // 증거는 채택되기 전까지 목록에 없음
   el('caseLabel').textContent = cf(c,'title');
@@ -7026,12 +7186,27 @@ function playQueue(){
       if(item.choiceType === 'outburst'){
         state._contemptPunish = (choiceKey==='punish');
         extra = buildOutburstAftermath(choiceKey);
+      } else if(item.choiceType === 'outburst2'){
+        if(choiceKey==='remove') state._contemptPunish = true;
+        extra = buildOutburstEscalationAftermath(choiceKey);
       } else if(item.choiceType === 'witness'){
         extra = buildWitnessAftermath(choiceKey);
       } else if(item.choiceType === 'misconduct'){
         extra = buildMisconductAftermath(choiceKey);
       }
       if(extra) state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
+      let insertedLen = extra ? extra.length : 0;
+      /* 구두 경고로 넘어간 첫 난동은, 그 경고를 비웃듯 다시 한번 소란을
+         피우는 "재차 난동"으로 이어질 수 있음 (사건당 최대 1회) */
+      if(item.choiceType === 'outburst' && choiceKey==='warn' && !state._outburstEscalated && Math.random() < 0.45){
+        state._outburstEscalated = true;
+        const remaining = state.dlgQueue.length - (state.dlgPos + 1 + insertedLen);
+        if(remaining > 2){
+          const escalation = buildOutburstEscalation();
+          const insertPos = state.dlgPos + 1 + insertedLen + 1 + Math.floor(Math.random()*(remaining-1));
+          state.dlgQueue.splice(insertPos, 0, ...escalation);
+        }
+      }
       state.dlgPos++;
       playQueue();
     });
@@ -7166,6 +7341,10 @@ function handleVerdictClick(type){
     showConfirmSevere(type);
     return;
   }
+  if(type==='집행유예'){
+    openSuspendedDetailPanel();
+    return;
+  }
   if(type==='징역' || type==='금고'){
     pendingPrimaryType = type;
     selectedYears = 0;
@@ -7200,6 +7379,76 @@ function confirmYears(){
   proceedToExtras(pendingPrimaryType, selectedYears);
 }
 
+/* ================= 집행유예 세부사항 (형법 제62조·제62조의2) =================
+   기존에는 "집행유예"를 고르면 세부 내용 없이 바로 선고되었으나, 실제로는
+   반드시 기본형(징역/금고)과 유예기간이 함께 정해지고, 보호관찰·사회봉사
+   명령·수강명령을 재량으로 덧붙일 수 있음. 이를 재현함 */
+let pendingSuspendedBaseMonths = 12;
+let pendingSuspendedYears = 2;
+let pendingProbation = false;
+let pendingCommunityHours = 0;
+let pendingEducationHours = 0;
+
+function openSuspendedDetailPanel(){
+  pendingSuspendedBaseMonths = 12;
+  pendingSuspendedYears = 2;
+  pendingProbation = false;
+  pendingCommunityHours = 0;
+  pendingEducationHours = 0;
+  el('verdictGrid').style.display='none';
+  el('yearsPanel').style.display='none';
+  renderSuspendedPanel();
+  el('suspendedPanel').style.display='flex';
+}
+function suspendedOptRow(opts, current, fmt, onclickName){
+  return opts.map(v=>`<button type="button" class="btn ${v===current?'':'secondary'} small" style="margin:3px;" onclick="${onclickName}(${v})">${fmt(v)}</button>`).join('');
+}
+function renderSuspendedPanel(){
+  const c = state.currentCase;
+  const edu = suggestedEducationProgram(c);
+  const baseOpts = [6,8,10,12,18,24,30,36];
+  const yearOpts = [1,2,3,4,5];
+  const csOpts = [0,40,80,120,160,200,300];
+  const eduOpts = [0,40,80,100];
+  el('suspendedBody').innerHTML = `
+    <div style="text-align:left;width:100%;max-width:340px;margin:0 auto;">
+      <div class="sub" style="margin-top:6px;">${tr('① 기본형 (형의 집행을 유예할 대상)','① Underlying Sentence (to be suspended)')}</div>
+      <div>${suspendedOptRow(baseOpts, pendingSuspendedBaseMonths, monthsLabel, 'setSuspendedBase')}</div>
+      <div class="sub" style="margin-top:14px;">${tr('② 집행유예 기간 (1~5년)','② Suspension Period (1-5 years)')}</div>
+      <div>${suspendedOptRow(yearOpts, pendingSuspendedYears, y=>tr(`${y}년`,`${y} yr`), 'setSuspendedYears')}</div>
+      <div class="sub" style="margin-top:14px;">${tr('③ 보호관찰 (선택 부가)','③ Probation (optional)')}</div>
+      <div><button type="button" class="btn ${pendingProbation?'':'secondary'} small" style="margin:3px;" onclick="toggleProbation()">${pendingProbation ? '✅ ' + tr(`보호관찰 ${pendingSuspendedYears}년 부과`,`Probation for ${pendingSuspendedYears} yr`) : tr('부과 안 함 (탭하여 부과)','Not imposed (tap to add)')}</button></div>
+      <div class="sub" style="margin-top:14px;">${tr('④ 사회봉사명령 (선택 부가)','④ Community Service Order (optional)')}</div>
+      <div>${suspendedOptRow(csOpts, pendingCommunityHours, h=>h===0?tr('없음','None'):tr(`${h}시간`,`${h}h`), 'setCommunityHours')}</div>
+      <div class="sub" style="margin-top:14px;">${tr(`⑤ 수강명령 (선택 부가 — ${edu.ko})`, `⑤ Education Order (optional — ${edu.en})`)}</div>
+      <div>${suspendedOptRow(eduOpts, pendingEducationHours, h=>h===0?tr('없음','None'):tr(`${h}시간`,`${h}h`), 'setEducationHours')}</div>
+    </div>
+  `;
+}
+function setSuspendedBase(v){ pendingSuspendedBaseMonths=v; renderSuspendedPanel(); }
+function setSuspendedYears(v){ pendingSuspendedYears=v; renderSuspendedPanel(); }
+function toggleProbation(){ pendingProbation=!pendingProbation; renderSuspendedPanel(); }
+function setCommunityHours(v){ pendingCommunityHours=v; renderSuspendedPanel(); }
+function setEducationHours(v){ pendingEducationHours=v; renderSuspendedPanel(); }
+function confirmSuspended(){
+  el('suspendedPanel').style.display='none';
+  const edu = suggestedEducationProgram(state.currentCase);
+  const preset = {
+    suspendedBaseMonths: pendingSuspendedBaseMonths,
+    suspendedYears: pendingSuspendedYears,
+    probation: pendingProbation,
+    communityHours: pendingCommunityHours,
+    educationHours: pendingEducationHours,
+    educationProgram: (pendingEducationHours>0) ? edu : null
+  };
+  proceedToExtras('집행유예', null, preset);
+}
+el('suspendedBack') && el('suspendedBack').addEventListener('click', ()=>{
+  el('suspendedPanel').style.display='none';
+  el('verdictGrid').style.display='grid';
+});
+el('suspendedConfirm') && el('suspendedConfirm').addEventListener('click', confirmSuspended);
+
 /* 스페이스바로 대사 넘기기 (텍스트 입력 중이거나 다른 패널이 떠 있을 때는 무시) */
 document.addEventListener('keydown', (e)=>{
   if(e.code !== 'Space' && e.key !== ' ') return;
@@ -7231,9 +7480,11 @@ let pendingResolveType = null;
 let pendingResolveYears = null;
 let pendingResolveExtras = null;
 
-function proceedToExtras(type, years){
+let pendingPresetExtras = null;
+function proceedToExtras(type, years, presetExtras){
   pendingResolveType = type;
   pendingResolveYears = years;
+  pendingPresetExtras = presetExtras || null;
   const c = state.currentCase;
   const qual = settings.lang==='en' && c.en && c.en.qualification ? c.en.qualification : c.qualification;
   const opts = [];
@@ -7243,7 +7494,7 @@ function proceedToExtras(type, years){
     opts.push({key:'revoke', label:tr(`자격상실 추가 — ${qual} 관련 자격을 완전히 상실`, `Add Loss of Qualification — permanently revoke ${qual}-related qualification`)});
   }
   if(!opts.length){
-    proceedToReason(type, years, {});
+    proceedToReason(type, years, presetExtras || {});
     return;
   }
   el('yearsPanel').style.display='none';
@@ -7263,7 +7514,7 @@ el('extrasBack') && el('extrasBack').addEventListener('click', ()=>{
   el('verdictGrid').style.display='grid';
 });
 el('extrasConfirm') && el('extrasConfirm').addEventListener('click', ()=>{
-  const extras = {};
+  const extras = Object.assign({}, pendingPresetExtras || {});
   el('extrasOptions').querySelectorAll('input[type=checkbox]').forEach(cb=>{
     if(cb.checked) extras[cb.dataset.extra] = true;
   });
@@ -8870,6 +9121,13 @@ function showTitle(){
   const streakN = dailyStreakData.streak || 0;
   const logSum = caseLogSummary();
   ov.innerHTML = `
+    <div class="title-bg-cycle">
+      <div class="title-bg-frame" style="background-image:url('title-bg1.jpg')"></div>
+      <div class="title-bg-frame" style="background-image:url('title-bg2.jpg')"></div>
+      <div class="title-bg-frame" style="background-image:url('title-bg3.jpg')"></div>
+      <div class="title-bg-frame" style="background-image:url('title-bg4.jpg')"></div>
+    </div>
+    <div class="title-bg-scrim"></div>
     <div class="title-layout">
       <div class="title-left">
         <div class="title-logo-row">

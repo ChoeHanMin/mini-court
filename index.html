@@ -453,6 +453,11 @@
   .title-levelinfo-sub{ color:var(--parchment-dim); }
   .title-judgestatus{ font-size:13px; color:var(--brass); margin:0 0 6px; line-height:1.5; }
   .title-btn{ margin-top:8px; }
+  .title-flag-watermark{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(72vw, 820px); height:auto; opacity:0.07; pointer-events:none; z-index:0;
+  }
+  .title-layout{ position:relative; z-index:1; }
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
     width:100%;max-width:320px;text-align:left;background:rgba(0,0,0,0.25);
@@ -862,10 +867,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.11.0.0
+   미니법정(Mini Court)  ver 1.12.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.11.0.0';
+const GAME_VERSION = '1.12.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1301,7 +1306,7 @@ const I18N = {
     judgeNameRequired:'이름을 입력해 주세요.',
     judgeStatusRegistered:'현재 판사', judgeStatusUnregistered:'판사 이름이 아직 등록되지 않았습니다',
     judgeChangeBtn:'변경', judgeSetBtn:'등록',
-    titleIntro:'당신은 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.',
+    titleIntro:'당신은 대한민국 형사법원의 판사입니다.<br>검사와 변호인의 공방을 듣고,<br>최종 판결을 내리십시오.',
     titleWarn:"무고한 사람에게 유죄를 내리거나<br>죄질에 맞지 않는 터무니없는 판결을 내리면<br>'법왜곡죄'로 당신이 고소당합니다.<br>죄를 지은 자를 함부로 풀어주면 시민들의 의심을 사게 됩니다.",
     startWarrantLabel:'⚖️ 구속영장 실질심사 시작',
     disclaimerLine:'⚖️ 이 게임은 대한민국 형사소송법을 기준으로 제작되었습니다.',
@@ -1334,7 +1339,7 @@ const I18N = {
     judgeNameRequired:'Please enter a name.',
     judgeStatusRegistered:'Presiding Judge', judgeStatusUnregistered:'No judge name registered yet',
     judgeChangeBtn:'Change', judgeSetBtn:'Set',
-    titleIntro:'You are a criminal court judge.<br>Listen to the prosecution and defense,<br>then hand down the final verdict.',
+    titleIntro:'You are a judge of the Republic of Korea\'s criminal court.<br>Listen to the prosecution and defense,<br>then hand down the final verdict.',
     titleWarn:"Convict an innocent person, or hand down<br>a sentence wildly out of line with the crime,<br>and you'll be charged with 'perverting the course of justice.'<br>Release the guilty too easily, and the public's suspicion will fall on you.",
     startWarrantLabel:'⚖️ Start Pre-Detention Hearing',
     disclaimerLine:'⚖️ 이 게임은 대한민국 형사소송법을 기준으로 제작되었습니다.',
@@ -5213,7 +5218,7 @@ const TUTORIAL_CASE = {
   charge:'도로교통법 위반 (무단횡단)',
   guilty:true,
   intro:'(이것은 튜토리얼입니다. 화면 아래 대사창을 탭하면 다음 대사로 넘어갑니다.) 피고인은 횡단보도가 아닌 곳에서 도로를 건너다 적발되었습니다. 아주 가벼운 사건입니다.',
-  prosOpen:'피고인은 명백히 무단횡단을 했습니다. (오른쪽 위 🔍 증거 버튼을 눌러 증거를 확인해보세요.)',
+  prosOpen:'피고인은 명백히 무단횡단을 했습니다. (잠시 후 검사가 "이의 있습니다!"를 외치며 증거를 제출할 것입니다. 그 화면에서 내용을 확인하고 채택 여부를 직접 결정해보세요.)',
   defOpen:'차량이 전혀 없는 새벽 시간대였고, 인명 피해나 사고는 전혀 없었습니다.',
   rounds:[
     {p:'그래도 법규 위반은 위반입니다.', d:'초범이며 죄질이 매우 경미합니다. (📜 요약 버튼으로 지금까지의 공방을 다시 볼 수 있습니다.)', momentum:-10}
@@ -5229,13 +5234,13 @@ const TUTORIAL_CASE = {
   },
   precedent:'이런 경미한 사건은 대부분 훈방되거나 소액 벌금·선고유예로 마무리됩니다.',
   evidence:[
-    {icon:'📹', name:'CCTV 영상', desc:'횡단보도가 아닌 곳에서 도로를 건너는 장면'}
+    {icon:'📹', name:'CCTV 영상', desc:'횡단보도가 아닌 곳에서 도로를 건너는 장면', detail:{type:'cctv', timestamp:'사건 당일 06:20 - 왕복 4차선 도로 CCTV', caption:'피고인이 횡단보도가 아닌 차도 한복판을 그대로 가로질러 건너는 장면이 촬영됨. 이른 새벽 시간대라 인근에 지나가는 차량은 없음.'}}
   ],
   en:{
     title:'Tutorial. The Jaywalking Incident',
     charge:'Violation of the Road Traffic Act (Jaywalking)',
     intro:'(This is a tutorial. Tap the dialogue box at the bottom of the screen to advance.) The defendant was caught crossing the road somewhere other than a crosswalk. A very minor case.',
-    prosOpen:'The defendant clearly jaywalked. (Try tapping the 🔍 Evidence button in the top right to check the evidence.)',
+    prosOpen:'The defendant clearly jaywalked. (In a moment, the prosecutor will shout "Objection!" and submit evidence. Review it on that screen and decide for yourself whether to admit it.)',
     defOpen:'It was in the early morning with no traffic at all, and there was no injury or accident of any kind.',
     rounds:[
       {p:'Even so, a traffic violation is a violation.', d:'It\'s a first offense and a very minor one. (You can tap the 📜 Summary button to review the arguments so far.)'}
@@ -5250,7 +5255,7 @@ const TUTORIAL_CASE = {
     },
     precedent:'Minor cases like this are usually resolved with a warning or a small fine and suspended sentence.',
     evidence:[
-      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant crossing the road away from the crosswalk'}
+      {icon:'📹', name:'CCTV Footage', desc:'Shows the defendant crossing the road away from the crosswalk', detail:{type:'cctv', timestamp:'06:20 on the day of the incident - 4-lane road CCTV', caption:'The defendant is seen walking straight across the middle of the roadway instead of using the crosswalk. It was early morning, so no vehicles were passing by.'}}
     ]
   }
 };
@@ -5675,6 +5680,19 @@ const TAINT_REASONS = [
   {key:'noMiranda', ko:'해당 자백은 진술거부권을 고지하지 않은 채 받아낸 것입니다', en:'This confession was taken without informing the suspect of the right to remain silent'}
 ];
 const TAINT_CHANCE = 0.25;
+/* 증거 종류와 안 맞는 오염 사유가 나오지 않도록(예: CCTV 영상인데 "강압적
+   신문 끝에 받아낸 자백"이라고 하는 등) 증거 유형별로 그럴듯한 사유만 골라 씀 */
+function taintReasonPoolFor(ev){
+  const d = ev && ev.detail;
+  /* "자백/진술/신문" 등 실제 신문·진술 관련 단어가 이름·설명에 있을 때만
+     강압수사·유도신문 계열 사유를 후보에 넣음 (자필 메모라도 범행계획서·
+     약정서처럼 신문과 무관한 문서는 제외) */
+  const isConfessionLike = /자백|진술서|진술을|신문(?!사)/.test((ev&&ev.name||'')+(ev&&ev.desc||''));
+  const keys = isConfessionLike ? ['coerced','leading','noMiranda','noWarrant']
+    : (d && (d.type==='cctv' || d.type==='forensic')) ? ['noWarrant','custody']
+    : ['noWarrant','custody','entrapment'];
+  return TAINT_REASONS.filter(r=>keys.includes(r.key));
+}
 const CLEAN_REBUTTAL_LINES = [
   {ko:'증거 자체는 인정하더라도, 이것만으로 사건 전체를 단정할 수는 없습니다.', en:"Even granting the evidence itself, it alone cannot settle the whole case."},
   {ko:'수집 절차에는 문제가 없어 보이나, 그 해석에는 이견이 있습니다.', en:'The collection process seems proper, but we dispute how it should be interpreted.'},
@@ -5688,7 +5706,7 @@ function buildEvidenceSubmissionItem(c, evIdx, submitterWho){
   /* 증거를 제출하는 쪽이 검사일 때만 "부당 수사로 오염된 증거"가 섞일 수 있음
      (변호인이 제출하는 무고 사건 증거는 통상 피고인 측에 유리한 자료이므로 제외) */
   const tainted = submitterWho==='pros' && Math.random() < TAINT_CHANCE;
-  const taintReason = tainted ? TAINT_REASONS[Math.floor(Math.random()*TAINT_REASONS.length)] : null;
+  const taintReason = tainted ? pickFrom(taintReasonPoolFor(ev)) : null;
   return {
     type:'evidence_submit',
     evIdx, submitterWho, tainted, taintReason,
@@ -7560,6 +7578,36 @@ function quitGame(){
   }
 }
 
+/* 타이틀 화면 배경에 아주 은은하게 깔리는 태극기 워터마크 (SVG로 직접 그려
+   별도 이미지 파일 없이 정확한 태극 문양·4괘를 재현) */
+const TAEGUKGI_WATERMARK_SVG = `
+<svg class="title-flag-watermark" viewBox="0 0 300 200" aria-hidden="true">
+  <rect x="0" y="0" width="300" height="200" fill="#ffffff"/>
+  <g transform="translate(150,100)">
+    <circle r="45" fill="#c60c30"/>
+    <path d="M0,-45 A22.5,22.5 0 0,0 0,0 A22.5,22.5 0 0,1 0,45 A45,45 0 0,1 0,-45" fill="#003478"/>
+  </g>
+  <g fill="#111111" transform="translate(70,50) rotate(45)">
+    <rect x="-19" y="-24" width="38" height="7"/>
+    <rect x="-19" y="-8" width="38" height="7"/>
+    <rect x="-19" y="8" width="38" height="7"/>
+  </g>
+  <g fill="#111111" transform="translate(230,50) rotate(-45)">
+    <rect x="-19" y="-24" width="16" height="7"/><rect x="3" y="-24" width="16" height="7"/>
+    <rect x="-19" y="-8" width="38" height="7"/>
+    <rect x="-19" y="8" width="16" height="7"/><rect x="3" y="8" width="16" height="7"/>
+  </g>
+  <g fill="#111111" transform="translate(70,150) rotate(-45)">
+    <rect x="-19" y="-24" width="38" height="7"/>
+    <rect x="-19" y="-8" width="16" height="7"/><rect x="3" y="-8" width="16" height="7"/>
+    <rect x="-19" y="8" width="38" height="7"/>
+  </g>
+  <g fill="#111111" transform="translate(230,150) rotate(45)">
+    <rect x="-19" y="-24" width="16" height="7"/><rect x="3" y="-24" width="16" height="7"/>
+    <rect x="-19" y="-8" width="16" height="7"/><rect x="3" y="-8" width="16" height="7"/>
+    <rect x="-19" y="8" width="16" height="7"/><rect x="3" y="8" width="16" height="7"/>
+  </g>
+</svg>`;
 function showTitle(){
   inTrial = false;
   const stray = document.getElementById('objectionBanner');
@@ -7579,6 +7627,7 @@ function showTitle(){
   const streakN = dailyStreakData.streak || 0;
   const logSum = caseLogSummary();
   ov.innerHTML = `
+    ${TAEGUKGI_WATERMARK_SVG}
     <div class="title-layout">
       <div class="title-left">
         <img src="icon-512.png" alt="Mini Court logo" class="title-logo" onerror="this.style.display='none'">
@@ -7587,7 +7636,8 @@ function showTitle(){
         <div class="title-levelinfo">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span class="title-levelinfo-sub">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
         <p class="title-judgestatus">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
         <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:5px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
-        <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
+        <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:5px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
+        <button class="btn secondary small" onclick="showDeveloperInfo()" style="margin-bottom:4px;">🧑‍💻 ${tr('개발자','Developer')}</button>
       </div>
       <div class="title-right">
         <p style="margin:0 0 4px;line-height:1.25;">${t('titleIntro')}</p>
@@ -7601,8 +7651,20 @@ function showTitle(){
         ${window.electronAPI ? `<button class="btn title-btn secondary" onclick="quitGame()">🚪 ${tr('게임에서 나가기','Exit Game')}</button>` : ''}
       </div>
     </div>
-    <div class="credit" style="margin-top:8px;">제작: 최한민 · Created By Choi Hanmin</div>
-    <div class="verline">ver ${GAME_VERSION}</div>`;
+    <div class="verline" style="margin-top:8px;">ver ${GAME_VERSION}</div>`;
+}
+function showDeveloperInfo(){
+  const ov = el('overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML = `
+    <h1>🧑‍💻 ${tr('개발자','Developer')}</h1>
+    <div class="lawtext" style="text-align:left;">
+      ${tr(
+        '한국외국어대학교 컴퓨터공학부 최한민.<br><br>이 게임을 만들기 위해 학교 로스쿨 교수님을 직접 찾아가 자문을 구하고, 형사소송법 책을 몇 번이고 반복해서 읽었습니다.',
+        'Choi Hanmin, Dept. of Computer Science &amp; Engineering, Hankuk University of Foreign Studies (HUFS CSE).<br><br>To make this game, I went and consulted law school professors at my university, and read criminal procedure law textbooks over and over again.'
+      )}
+    </div>
+    <button class="btn secondary" onclick="showTitle()">${tr('뒤로','Back')}</button>`;
 }
 
 function startDailyCase(){

@@ -458,7 +458,7 @@
     width:38px; flex-shrink:0; overflow:visible;
     filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5));
   }
-  .title-flag-wrap svg{
+  .title-flag-wrap img{
     display:block; width:100%; height:auto;
     transform-origin:0% 50%;
     animation:flagWave 2.6s ease-in-out infinite;
@@ -880,10 +880,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.13.1.0
+   미니법정(Mini Court)  ver 1.13.2.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.13.1.0';
+const GAME_VERSION = '1.13.2.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -7847,36 +7847,9 @@ function quitGame(){
   }
 }
 
-/* 타이틀 화면 로고 옆에 놓이는 태극기 (SVG로 직접 그려 별도 이미지 파일
-   없이 정확한 태극 문양·4괘를 재현하고, CSS 애니메이션으로 살짝 휘날리게 함) */
-const TAEGUKGI_SVG = `
-<svg viewBox="0 0 300 200" aria-hidden="true">
-  <rect x="0" y="0" width="300" height="200" fill="#ffffff"/>
-  <g transform="translate(150,100)">
-    <circle r="45" fill="#c60c30"/>
-    <path d="M0,-45 A22.5,22.5 0 0,0 0,0 A22.5,22.5 0 0,1 0,45 A45,45 0 0,1 0,-45" fill="#003478"/>
-  </g>
-  <g fill="#111111" transform="translate(70,50) rotate(45)">
-    <rect x="-19" y="-24" width="38" height="7"/>
-    <rect x="-19" y="-8" width="38" height="7"/>
-    <rect x="-19" y="8" width="38" height="7"/>
-  </g>
-  <g fill="#111111" transform="translate(230,50) rotate(-45)">
-    <rect x="-19" y="-24" width="16" height="7"/><rect x="3" y="-24" width="16" height="7"/>
-    <rect x="-19" y="-8" width="38" height="7"/>
-    <rect x="-19" y="8" width="16" height="7"/><rect x="3" y="8" width="16" height="7"/>
-  </g>
-  <g fill="#111111" transform="translate(70,150) rotate(-45)">
-    <rect x="-19" y="-24" width="38" height="7"/>
-    <rect x="-19" y="-8" width="16" height="7"/><rect x="3" y="-8" width="16" height="7"/>
-    <rect x="-19" y="8" width="38" height="7"/>
-  </g>
-  <g fill="#111111" transform="translate(230,150) rotate(45)">
-    <rect x="-19" y="-24" width="16" height="7"/><rect x="3" y="-24" width="16" height="7"/>
-    <rect x="-19" y="-8" width="16" height="7"/><rect x="3" y="-8" width="16" height="7"/>
-    <rect x="-19" y="8" width="16" height="7"/><rect x="3" y="8" width="16" height="7"/>
-  </g>
-</svg>`;
+/* 타이틀 화면 로고 옆에 놓이는 태극기: 실제 국기 이미지 파일을 사용하고
+   CSS 애니메이션으로 살짝 휘날리게 함 */
+const TAEGUKGI_SVG = `<img src="taegukgi.png" alt="Korean flag">`;
 function showTitle(){
   inTrial = false;
   const stray = document.getElementById('objectionBanner');

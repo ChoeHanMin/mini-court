@@ -446,7 +446,12 @@
   .title-layout{ display:flex; flex-direction:column; align-items:center; width:100%; }
   .title-left{ display:flex; flex-direction:column; align-items:center; width:100%; }
   .title-right{ display:flex; flex-direction:column; align-items:center; width:100%; }
-  .title-logo{ width:56px; height:56px; border-radius:12px; margin-bottom:4px; box-shadow:0 4px 14px rgba(0,0,0,0.55); }
+  .title-logo{ width:64px; height:64px; border-radius:12px; margin-bottom:6px; box-shadow:0 4px 14px rgba(0,0,0,0.55); }
+  .title-name{ margin:0 0 8px; line-height:1.3; }
+  .title-name-en{ font-size:0.6em; color:var(--parchment-dim); }
+  .title-levelinfo{ font-size:12px; color:var(--brass); margin-bottom:6px; line-height:1.5; }
+  .title-levelinfo-sub{ color:var(--parchment-dim); }
+  .title-judgestatus{ font-size:13px; color:var(--brass); margin:0 0 6px; line-height:1.5; }
   .title-btn{ margin-top:8px; }
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
@@ -506,6 +511,15 @@
   .ev-detail-forensic .fr-conclusion{margin-top:10px;font-size:12px;line-height:1.6;padding:8px;background:rgba(36,26,16,0.06);border-left:3px solid var(--crimson);}
   .ev-photo-wrap{display:flex;justify-content:center;margin-bottom:12px;}
   .ev-photo-wrap canvas{border:1px solid #c9bfa0;border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,0.35);width:120px;height:120px;}
+
+  /* 증거 채택 화면: 제출 측과 반대 측의 주장을 간략히 보여주는 발언 카드 */
+  .argExchange{width:100%;max-width:360px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;text-align:left;}
+  .argLine{background:rgba(0,0,0,0.28);border-left:3px solid var(--brass-dim);border-radius:6px;padding:8px 10px;font-size:11px;line-height:1.5;}
+  .argLine b{display:block;color:var(--brass);font-size:10.5px;margin-bottom:3px;letter-spacing:0.5px;}
+  .argLine span{color:var(--parchment);}
+  .argLine.pros{border-left-color:#3f5c7a;}
+  .argLine.def{border-left-color:#8a6d33;}
+  .argLine.tainted{border-left-color:var(--crimson-light);}
   .ev-detail-handwritten{
     background:linear-gradient(180deg,#e8dcc0,#ddcda6);color:#2a2115;padding:20px 18px;
     border:1px solid #a8895a;box-shadow:inset 0 0 20px rgba(0,0,0,0.15);
@@ -678,11 +692,13 @@
       flex-direction:row; align-items:center; justify-content:center;
       gap:80px; max-width:1200px; width:100%; margin:0 auto;
     }
-    .title-left{ flex:0 0 420px; align-items:center; text-align:center; }
+    .title-left{ flex:0 0 460px; align-items:center; text-align:center; }
     .title-right{ flex:0 0 480px; align-items:stretch; text-align:left; }
     .title-right p{ max-width:100%!important; text-align:left; }
-    .title-logo{ width:210px!important; height:210px!important; border-radius:32px!important; margin-bottom:22px!important; box-shadow:0 10px 28px rgba(0,0,0,0.6)!important; }
-    .title-left h1{ font-size:46px!important; }
+    .title-logo{ width:260px!important; height:260px!important; border-radius:36px!important; margin-bottom:26px!important; box-shadow:0 10px 28px rgba(0,0,0,0.6)!important; }
+    .title-name{ font-size:56px!important; margin-bottom:16px!important; }
+    .title-levelinfo{ font-size:22px!important; margin-bottom:12px!important; }
+    .title-judgestatus{ font-size:23px!important; margin-bottom:12px!important; }
     .title-btn{
       width:100%; max-width:none!important; display:flex; align-items:center; justify-content:center;
       gap:12px; font-size:22px!important; padding:20px 24px!important; border-radius:16px;
@@ -712,6 +728,9 @@
     .ev-detail-handwritten{ font-size:19px!important; }
     .ev-detail-handwritten .hw-source{ font-size:13px!important; }
     .ev-photo-wrap canvas{ width:180px; height:180px; }
+    .argExchange{ max-width:600px; gap:12px; }
+    .argLine{ font-size:15px!important; padding:12px 16px; border-radius:10px; }
+    .argLine b{ font-size:14px!important; margin-bottom:5px; }
     .choiceBtn{ font-size:17px!important; padding:13px 18px; }
     .objection-banner{ font-size:20px!important; padding:20px 32px; border-width:4px; }
     #verdictPanel{ padding:26px 24px; justify-content:center; }
@@ -843,10 +862,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.10.1.0
+   미니법정(Mini Court)  ver 1.11.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.10.1.0';
+const GAME_VERSION = '1.11.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1895,23 +1914,33 @@ const APPEARANCE_POOLS = {
 const PROS_OUTFIT_COLOR = '#171310';
 const PROS_ACCENT_COLOR = '#7a1f52';
 
-/* ================= 라이벌 변호사·검사 (가끔 등장하는 고정 캐릭터) =================
-   무작위 외모 대신, 정해진 이름과 고유 색상 팔레트를 가진 캐릭터가 낮은 확률로
-   등장한다. 만난 횟수가 쌓이면 대사에 그 사실이 반영되고, 관록 있는 상대일수록
-   더 날카롭게 몰아붙인다. */
+/* ================= 매 재판마다 배정되는 변호사·검사 이름 =================
+   예전엔 낮은 확률로만 정해진 이름이 등장했지만, 이제는 매 재판마다 두 역할
+   모두 이 풀에서 이름을 뽑아 배정한다 (매번 진짜 이름이 나오게 해달라는
+   요청 반영). 우연히 같은 이름이 여러 번 뽑히면 "관록 있는 상대"로 인식되어
+   대사에 반영되고 더 날카롭게 몰아붙인다. */
 const RIVAL_ATTORNEYS = {
   def: [
     {id:'def_kang', ko:'강태민 변호사', en:'Attorney Kang Tae-min', hair:'#241a14', skin:'#dcb28c', outfit:'#1e3350', accent:'#c9a24b', collar:'#f2ede0'},
     {id:'def_oh', ko:'오세영 변호사', en:'Attorney Oh Se-young', hair:'#6b4526', skin:'#e2ba90', outfit:'#4a2530', accent:'#3a3f55', collar:'#e8dcc0'},
-    {id:'def_baek', ko:'백지원 변호사', en:'Attorney Baek Ji-won', hair:'#1a1a1a', skin:'#c99a6e', outfit:'#2a4530', accent:'#7a2230', collar:'#d8c39a'}
+    {id:'def_baek', ko:'백지원 변호사', en:'Attorney Baek Ji-won', hair:'#1a1a1a', skin:'#c99a6e', outfit:'#2a4530', accent:'#7a2230', collar:'#d8c39a'},
+    {id:'def_kim', ko:'김수혁 변호사', en:'Attorney Kim Su-hyeok', hair:'#463022', skin:'#e8c39c', outfit:'#25405a', accent:'#8a6d33', collar:'#ece1c4'},
+    {id:'def_yong', ko:'용성지 변호사', en:'Attorney Yong Seong-ji', hair:'#1a1a1a', skin:'#f0c8a0', outfit:'#302838', accent:'#5c1a34', collar:'#dcd4c0'},
+    {id:'def_han', ko:'한지수 변호사', en:'Attorney Han Ji-soo', hair:'#5c4a30', skin:'#b8875e', outfit:'#403a20', accent:'#2f5c4a', collar:'#d8c39a'},
+    {id:'def_seo', ko:'서준혁 변호사', en:'Attorney Seo Jun-hyeok', hair:'#2e2318', skin:'#c99a6e', outfit:'#502a2a', accent:'#3f5c7a', collar:'#f2ede0'},
+    {id:'def_yoon', ko:'윤아름 변호사', en:'Attorney Yoon A-reum', hair:'#7a5a3a', skin:'#f2d0aa', outfit:'#1e3350', accent:'#7a2230', collar:'#e8dcc0'}
   ],
   pros: [
     {id:'pros_kim', ko:'김도윤 검사', en:'Prosecutor Kim Do-yoon', hair:'#3a2c1c', skin:'#d4a878', collar:'#f2ede0'},
     {id:'pros_lee', ko:'이수현 검사', en:'Prosecutor Lee Su-hyun', hair:'#1c1610', skin:'#e8c39c', collar:'#ece1c4'},
-    {id:'pros_jung', ko:'정하람 검사', en:'Prosecutor Jung Ha-ram', hair:'#7a5a3a', skin:'#b8875e', collar:'#dcd4c0'}
+    {id:'pros_jung', ko:'정하람 검사', en:'Prosecutor Jung Ha-ram', hair:'#7a5a3a', skin:'#b8875e', collar:'#dcd4c0'},
+    {id:'pros_park', ko:'박지훈 검사', en:'Prosecutor Park Ji-hoon', hair:'#241a14', skin:'#dcb28c', collar:'#d8c39a'},
+    {id:'pros_choi', ko:'최유나 검사', en:'Prosecutor Choi Yu-na', hair:'#463022', skin:'#f0c8a0', collar:'#f2ede0'},
+    {id:'pros_han2', ko:'한도경 검사', en:'Prosecutor Han Do-kyung', hair:'#1a1a1a', skin:'#a67550', collar:'#ece1c4'},
+    {id:'pros_song', ko:'송지아 검사', en:'Prosecutor Song Ji-a', hair:'#6b2f2f', skin:'#e2ba90', collar:'#dcd4c0'},
+    {id:'pros_yang', ko:'양준서 검사', en:'Prosecutor Yang Jun-seo', hair:'#2e2318', skin:'#c99a6e', collar:'#e8dcc0'}
   ]
 };
-const RIVAL_APPEAR_CHANCE = 0.35;
 let rivalStats = {};
 async function loadRivalStats(){
   try{
@@ -1961,9 +1990,9 @@ function randomizeAppearance(){
     def:{glasses: Math.random()<0.5, robe: defRobe, wideRobe: defRobe, scale:randomBuildScale()}
   };
 
-  /* 낮은 확률로 검사·변호인 자리에 고정 라이벌 캐릭터가 등장 (각 역할 독립 판정) */
+  /* 매 재판마다 검사·변호인 모두에게 이름을 배정 (두 역할 독립 추첨) */
   state.currentRivals = {def:null, pros:null};
-  if(Math.random() < RIVAL_APPEAR_CHANCE){
+  {
     const rival = pickFrom(RIVAL_ATTORNEYS.def);
     state.currentRivals.def = rival;
     state.rolePalettes.def.hair = rival.hair;
@@ -1973,7 +2002,7 @@ function randomizeAppearance(){
     state.rolePalettes.def.collar = rival.collar;
     rivalStats[rival.id] = (rivalStats[rival.id]||0) + 1;
   }
-  if(Math.random() < RIVAL_APPEAR_CHANCE){
+  {
     const rival = pickFrom(RIVAL_ATTORNEYS.pros);
     state.currentRivals.pros = rival;
     state.rolePalettes.pros.hair = rival.hair;
@@ -1982,7 +2011,7 @@ function randomizeAppearance(){
     /* 검사복 자체(검정+자주)는 항상 고정이므로 outfit/accent는 건드리지 않음 */
     rivalStats[rival.id] = (rivalStats[rival.id]||0) + 1;
   }
-  if(state.currentRivals.def || state.currentRivals.pros) saveRivalStats();
+  saveRivalStats();
 }
 function rivalEncounterCount(rival){
   if(!rival) return 0;
@@ -5632,13 +5661,37 @@ function pickDefendantReaction(){
    "이의 있습니다!"를 외치며 새 증거를 제출하면, 재판장(플레이어)이 그
    증거를 자세히 읽어본 뒤 채택할지 기각할지 결정한다. 채택한 증거만
    "증거" 버튼 목록에 쌓이고, 기각한 증거는 다시 볼 수 없다. */
+/* ================= 위법·부당 수집 증거(오염된 증거) =================
+   검사(때로는 변호인)가 항상 완벽하게 수집된 증거만 내놓는 건 아니다.
+   일정 확률로 절차상 문제가 있는 증거가 섞여 나오며, 상대측이 이를 근거로
+   증거능력을 다투는 반론을 펼친다. 최종 채택 여부는 여전히 판사(플레이어)의
+   몫이다 — 채택/기각 결과에 따라 평판에 작은 영향을 준다. */
+const TAINT_REASONS = [
+  {key:'noWarrant', ko:'해당 증거는 별건 수사 중 영장 없이 압수되었습니다', en:'This evidence was seized without a warrant during an unrelated investigation'},
+  {key:'coerced', ko:'해당 자백은 장시간의 강압적인 신문 끝에 받아낸 것입니다', en:'This confession was extracted after a prolonged, coercive interrogation'},
+  {key:'leading', ko:'해당 진술은 유도신문을 통해 얻어낸 것입니다', en:'This statement was obtained through leading, suggestive questioning'},
+  {key:'custody', ko:'해당 증거는 보관 과정에서 훼손·오염되었을 가능성이 있습니다', en:'This evidence may have been damaged or contaminated during storage'},
+  {key:'entrapment', ko:'해당 증거는 함정수사를 통해 확보된 것입니다', en:'This evidence was obtained through an entrapment operation'},
+  {key:'noMiranda', ko:'해당 자백은 진술거부권을 고지하지 않은 채 받아낸 것입니다', en:'This confession was taken without informing the suspect of the right to remain silent'}
+];
+const TAINT_CHANCE = 0.25;
+const CLEAN_REBUTTAL_LINES = [
+  {ko:'증거 자체는 인정하더라도, 이것만으로 사건 전체를 단정할 수는 없습니다.', en:"Even granting the evidence itself, it alone cannot settle the whole case."},
+  {ko:'수집 절차에는 문제가 없어 보이나, 그 해석에는 이견이 있습니다.', en:'The collection process seems proper, but we dispute how it should be interpreted.'},
+  {ko:'정황 증거에 불과하므로, 그 신빙성 판단은 재판장님께 맡기겠습니다.', en:'This is merely circumstantial, so we leave its weight to the court to decide.'},
+  {ko:'해당 자료만으로는 피고인과의 직접적 연관성이 부족합니다.', en:"This material alone does not sufficiently connect the defendant to the crime."}
+];
 function buildEvidenceSubmissionItem(c, evIdx, submitterWho){
   const ev = (cevidence(c)||[])[evIdx];
   const rival = submitterWho==='pros' ? (state.currentRivals && state.currentRivals.pros) : (state.currentRivals && state.currentRivals.def);
   const label = rival ? rivalName(rival) : (submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel'));
+  /* 증거를 제출하는 쪽이 검사일 때만 "부당 수사로 오염된 증거"가 섞일 수 있음
+     (변호인이 제출하는 무고 사건 증거는 통상 피고인 측에 유리한 자료이므로 제외) */
+  const tainted = submitterWho==='pros' && Math.random() < TAINT_CHANCE;
+  const taintReason = tainted ? TAINT_REASONS[Math.floor(Math.random()*TAINT_REASONS.length)] : null;
   return {
     type:'evidence_submit',
-    evIdx, submitterWho,
+    evIdx, submitterWho, tainted, taintReason,
     name: label,
     who: submitterWho,
     mood:'neutral',
@@ -5662,10 +5715,27 @@ function showEvidenceSubmissionOverlay(item, cb){
   const submitterRival = item.submitterWho==='pros' ? (state.currentRivals && state.currentRivals.pros) : (state.currentRivals && state.currentRivals.def);
   const submitterLabel = submitterRival ? rivalName(submitterRival) : (item.submitterWho==='pros' ? t('prosecutorLabel') : t('defenseLabel'));
   const submitterPhrase = submitterLabel + koreanSubjectParticle(submitterLabel);
+  const opposingWho = item.submitterWho==='pros' ? 'def' : 'pros';
+  const opposingRival = state.currentRivals && state.currentRivals[opposingWho];
+  const opposingLabel = opposingRival ? rivalName(opposingRival) : (opposingWho==='pros' ? t('prosecutorLabel') : t('defenseLabel'));
+  const submitterArg = item.submitterWho==='pros'
+    ? tr('이 증거는 피고인의 혐의를 뒷받침하는 명백한 자료입니다. 반드시 채택해 주시기 바랍니다.', "This evidence clearly supports the defendant's guilt. I urge the court to admit it.")
+    : tr('이 증거는 피고인의 무고함을 뒷받침하는 중요한 자료입니다. 채택해 주시기 바랍니다.', "This evidence supports the defendant's innocence. I urge the court to admit it.");
+  let opposingArg;
+  if(item.tainted){
+    opposingArg = tr(`이의 있습니다! ${item.taintReason.ko}. 따라서 증거능력을 인정해서는 안 됩니다.`, `Objection! ${item.taintReason.en}. It should therefore be ruled inadmissible.`);
+  } else {
+    const pick = CLEAN_REBUTTAL_LINES[Math.floor(Math.random()*CLEAN_REBUTTAL_LINES.length)];
+    opposingArg = tr(pick.ko, pick.en);
+  }
   ov.innerHTML = `
     <h1>⚖️ ${tr('이의 있습니다!','Objection!')}</h1>
-    <p style="color:var(--brass-dim);">${tr(`${submitterPhrase} 새로운 증거를 제출했습니다. 채택 여부를 결정하기 전에 내용을 확인하십시오.`, `${submitterLabel} has submitted new evidence. Review it before deciding whether to admit it.`)}</p>
+    <p style="color:var(--brass-dim);">${tr(`${submitterPhrase} 새로운 증거를 제출했습니다. 채택 여부를 결정하기 전에 양측의 주장을 확인하십시오.`, `${submitterLabel} has submitted new evidence. Review both sides' arguments before deciding whether to admit it.`)}</p>
     <h2>${ev.icon} ${ev.name}</h2>
+    <div class="argExchange">
+      <div class="argLine ${item.submitterWho}"><b>${submitterLabel}</b><span>${submitterArg}</span></div>
+      <div class="argLine ${opposingWho} ${item.tainted?'tainted':''}"><b>${opposingLabel}</b><span>${opposingArg}</span></div>
+    </div>
     ${ev.detail ? evidenceDetailHtml(ev.detail, ev) : `<p>${ev.desc}</p>`}
     <p style="font-size:12px;">${tr('이 증거를 채택하시겠습니까?','Will you admit this evidence?')}</p>
     <button class="btn" onclick="resolveEvidenceAdmit(true)">✅ ${tr('채택한다','Admit')}</button>
@@ -5679,10 +5749,16 @@ function resolveEvidenceAdmit(admitted){
   _pendingEvidenceAdmitCb = null;
   cb && cb(admitted);
 }
-function buildEvidenceAdmitAftermath(admitted){
+function buildEvidenceAdmitAftermath(admitted, tainted){
   const NM = t('narratorLabel');
   if(admitted){
+    if(tainted){
+      return [{type:'narrator', name:NM, text:tr('재판장이 절차상 문제 제기에도 불구하고 증거를 채택했습니다. 이제 "증거" 버튼에서 확인할 수 있습니다.','Despite the procedural objection, the judge admits the evidence. It can now be reviewed via the Evidence button.')}];
+    }
     return [{type:'narrator', name:NM, text:tr('재판장이 증거를 채택했습니다. 이제 "증거" 버튼에서 확인할 수 있습니다.','The judge admits the evidence. It can now be reviewed via the Evidence button.')}];
+  }
+  if(tainted){
+    return [{type:'narrator', name:NM, text:tr('재판장이 위법·부당하게 수집된 증거로 판단해 채택을 기각했습니다.','The judge finds the evidence to have been improperly obtained and rejects it.')}];
   }
   return [{type:'narrator', name:NM, text:tr('재판장이 증거 채택을 기각했습니다.',"The judge rejects the evidence.")}];
 }
@@ -5931,7 +6007,9 @@ function buildDialogueQueue(c){
   const rivalDef = state.currentRivals && state.currentRivals.def;
   const PROS = rivalPros ? rivalName(rivalPros) : t('prosecutorLabel');
   const DEF = rivalDef ? rivalName(rivalDef) : t('defenseLabel');
-  if(rivalPros || rivalDef){
+  /* 이제 매 재판마다 이름이 배정되므로, 재회 안내 대사는 너무 자주 반복되지
+     않도록 확률적으로만(35%) 표시함 */
+  if((rivalPros || rivalDef) && Math.random()<0.35){
     const lines = [];
     if(rivalPros){
       const n = rivalEncounterCount(rivalPros);
@@ -6037,13 +6115,21 @@ function playQueue(){
     spawnObjectionBanner();
     showDialogue(item, ()=>{
       showEvidenceSubmissionOverlay(item, (admitted)=>{
+        const c = state.currentCase;
+        const ev = (cevidence(c)||[])[item.evIdx];
         if(admitted){
-          const c = state.currentCase;
           if(!c._acceptedEvidenceIdx) c._acceptedEvidenceIdx = [];
           c._acceptedEvidenceIdx.push(item.evIdx);
           el('evidenceBtn').style.display = 'inline-block';
         }
-        const extra = buildEvidenceAdmitAftermath(admitted);
+        /* 위법·부당 수집 증거를 제대로 걸러냈는지에 따라 평판에 작은 영향을 줌
+           (채택하면 소폭 하락, 올바르게 기각하면 소폭 상승) — 사건 도중 조용히
+           반영되며, 다음 판결 결과 화면에서 승급/강등에 누적 반영됨 */
+        if(item.tainted){
+          if(ev) ev._tainted = true;
+          applyReputationDelta(admitted ? -3 : 2);
+        }
+        const extra = buildEvidenceAdmitAftermath(admitted, item.tainted);
         state.dlgQueue.splice(state.dlgPos+1, 0, ...extra);
         state.dlgPos++;
         playQueue();
@@ -6536,10 +6622,12 @@ async function clearArchive(){
    CCTV 증거는 카메라 이모지 대신 흑백 감시카메라 정지 프레임(그레인/실루엣)을
    그려서 실제 캡처 화면처럼 보이게 한다. */
 function classifyEvidenceVisual(ev, d){
+  const c = state.currentCase;
   const hay = [
     ev && ev.name, ev && ev.desc,
     d && d.caption, d && d.conclusion, d && d.text, d && d.title,
-    d && JSON.stringify(d.fields||[])
+    d && JSON.stringify(d.fields||[]),
+    c && c.title, c && c.charge, c && c.tag
   ].filter(Boolean).join(' ');
   let kind = 'generic';
   if(/칼|흉기용|회칼|식칼|과도|커터칼/.test(hay)) kind = 'knife';
@@ -6556,8 +6644,13 @@ function classifyEvidenceVisual(ev, d){
   else if(/편지|쪽지|메모지|일기장/.test(hay)) kind = 'note';
 
   let scene = 'default';
-  if(/폭행|구타|난투|집단|가격/.test(hay)) scene = 'assault';
+  if(/살인|시신|사체/.test(hay)) scene = 'murder';
+  else if(/폭행|구타|난투|집단|가격|강간|성폭행/.test(hay)) scene = 'assault';
   else if(/절도|훔치|절취|들치기|빼돌/.test(hay)) scene = 'theft';
+  else if(/주거침입|빈집|침입/.test(hay)) scene = 'breakin';
+  else if(/마약\s*(거래|유통|매매)|마약/.test(hay)) scene = 'drugdeal';
+  else if(/기물파손|낙서|훼손/.test(hay)) scene = 'vandalism';
+  else if(/스토킹|미행|괴롭힘/.test(hay)) scene = 'harassment';
   else if(/차량|교통|자동차|충돌|음주운전/.test(hay)) scene = 'vehicle';
   else if(/방화|화재|불길|연기/.test(hay)) scene = 'fire';
   return {kind, scene};
@@ -6725,44 +6818,160 @@ function drawEvidencePhoto(canvas, kind){
   const drawer = EV_PHOTO_DRAWERS[kind] || EV_PHOTO_DRAWERS.generic;
   drawer(ctx, w/2, h/2+6);
 }
+/* CCTV 정지 프레임: 흑백 감시카메라 특유의 초록빛 야간 모드 톤 + 그레인/
+   스캔라인에, 상황별 소품(진열대·계산대, 도로·스키드마크, 쓰러진 피해자와
+   핏자국, 창문 파손 흔적, 거래 가방, 스프레이 낙서 등)을 추가해 훨씬 더
+   "실제로 찍힌 장면"처럼 보이게 그린다. */
 function drawCctvFrame(canvas, scene){
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
+  const groundY = h*0.8;
   ctx.clearRect(0,0,w,h);
-  ctx.fillStyle = '#12140f';
+
+  /* 야간 감시카메라 특유의 초록빛 단색 톤 배경 */
+  const bgGrad = ctx.createLinearGradient(0,0,0,h);
+  bgGrad.addColorStop(0,'#0c1a0e');
+  bgGrad.addColorStop(1,'#050c06');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0,0,w,h);
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
-  for(let y=0;y<h;y+=3) ctx.fillRect(0,y,w,1);
-  ctx.fillStyle = 'rgba(255,255,255,0.09)';
-  for(let i=0;i<50;i++){ ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1); }
-  const groundY = h*0.82;
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+
+  /* 바닥/벽 구분 및 원근감을 주는 타일 라인 */
+  ctx.strokeStyle = 'rgba(140,255,150,0.12)';
+  ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(w,groundY); ctx.stroke();
-  function figure(x, tint){
-    ctx.fillStyle = tint || 'rgba(200,200,200,0.55)';
-    ctx.beginPath(); ctx.arc(x, groundY-38, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillRect(x-6, groundY-32, 12, 26);
-    ctx.fillRect(x-9, groundY-6, 6, 10);
-    ctx.fillRect(x+3, groundY-6, 6, 10);
+  for(let x=0; x<=w; x+=w/8){
+    ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(w/2 + (x-w/2)*0.25, groundY); ctx.stroke();
   }
-  function shelf(x){ ctx.fillStyle = 'rgba(150,150,150,0.35)'; ctx.fillRect(x, groundY-50, 10, 50); }
-  function car(x){
-    ctx.fillStyle = 'rgba(180,180,180,0.5)';
+
+  function figure(x, opts){
+    opts = opts||{};
+    const tint = opts.tint || 'rgba(170,255,180,0.65)';
+    const fallen = opts.fallen;
+    ctx.fillStyle = tint;
+    if(fallen){
+      /* 쓰러진 인물: 바닥에 누운 실루엣 */
+      ctx.beginPath(); ctx.ellipse(x, groundY-4, 22, 7, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x-24, groundY-5, 5, 0, Math.PI*2); ctx.fill();
+      return;
+    }
+    const armSwing = opts.walk ? Math.sin(Date.now()/300 + x) * 3 : 0;
+    ctx.beginPath(); ctx.arc(x, groundY-40, 5.5, 0, Math.PI*2); ctx.fill(); /* 머리 */
+    ctx.fillRect(x-5, groundY-34, 10, 22); /* 몸통 */
+    ctx.fillRect(x-8+armSwing, groundY-33, 3, 16); /* 팔 */
+    ctx.fillRect(x+5-armSwing, groundY-33, 3, 16);
+    ctx.fillRect(x-7, groundY-12, 5, 12); /* 다리 */
+    ctx.fillRect(x+2, groundY-12, 5, 12);
+  }
+  function shelfWithItems(x){
+    ctx.fillStyle = 'rgba(120,200,130,0.3)';
+    ctx.fillRect(x, groundY-52, 12, 52);
+    ctx.fillRect(x, groundY-52, 46, 5);
+    ctx.fillRect(x, groundY-30, 46, 5);
+    ctx.fillStyle = 'rgba(170,255,180,0.35)';
+    for(let i=0;i<5;i++){ ctx.fillRect(x+4+i*8, groundY-49, 5, 6); }
+    for(let i=0;i<5;i++){ ctx.fillRect(x+4+i*8, groundY-27, 5, 6); }
+  }
+  function counter(x){
+    ctx.fillStyle = 'rgba(120,200,130,0.3)';
+    ctx.fillRect(x, groundY-22, 50, 22);
+    ctx.fillStyle = 'rgba(170,255,180,0.4)';
+    ctx.fillRect(x+34, groundY-30, 12, 10); /* 계산대 단말기 */
+  }
+  function car(x, skid){
+    if(skid){
+      ctx.strokeStyle = 'rgba(170,255,180,0.3)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x-30,groundY+2); ctx.lineTo(x+70,groundY+2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-25,groundY+6); ctx.lineTo(x+65,groundY+6); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(140,220,150,0.45)';
     ctx.fillRect(x, groundY-22, 60, 18);
     ctx.fillRect(x+10, groundY-32, 34, 12);
+    ctx.fillStyle = 'rgba(10,20,10,0.6)'; ctx.fillRect(x+14, groundY-30, 12, 9);
+    ctx.fillStyle = 'rgba(255,120,120,0.7)'; ctx.fillRect(x-2, groundY-14, 3, 5);
   }
-  if(scene==='assault'){ figure(w*0.42,'rgba(210,150,150,0.6)'); figure(w*0.56); }
-  else if(scene==='theft'){ shelf(w*0.72); figure(w*0.42); }
-  else if(scene==='vehicle'){ car(w*0.28); figure(w*0.78); }
-  else if(scene==='fire'){
+  function bloodPool(x, y){
+    ctx.fillStyle = 'rgba(60,10,10,0.55)';
+    ctx.beginPath(); ctx.ellipse(x, y, 26, 9, 0, 0, Math.PI*2); ctx.fill();
+  }
+  function windowFrame(x){
+    ctx.strokeStyle = 'rgba(170,255,180,0.4)'; ctx.lineWidth = 2;
+    ctx.strokeRect(x, groundY-70, 40, 46);
+    ctx.beginPath(); ctx.moveTo(x+20,groundY-70); ctx.lineTo(x+20,groundY-24); ctx.moveTo(x,groundY-47); ctx.lineTo(x+40,groundY-47); ctx.stroke();
+    /* 깨진 유리 파편 표시 */
+    ctx.strokeStyle = 'rgba(170,255,180,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+8,groundY-60); ctx.lineTo(x+20,groundY-47); ctx.lineTo(x+30,groundY-58); ctx.stroke();
+  }
+  function bag(x){
+    ctx.fillStyle = 'rgba(140,220,150,0.4)';
+    ctx.fillRect(x, groundY-18, 20, 16);
+    ctx.strokeStyle = 'rgba(170,255,180,0.5)'; ctx.beginPath(); ctx.moveTo(x+4,groundY-18); ctx.lineTo(x+4,groundY-24); ctx.lineTo(x+16,groundY-24); ctx.lineTo(x+16,groundY-18); ctx.stroke();
+  }
+  function graffiti(x){
+    ctx.strokeStyle = 'rgba(170,255,180,0.5)'; ctx.lineWidth = 2; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(x,groundY-40); ctx.lineTo(x+18,groundY-55); ctx.lineTo(x+8,groundY-42); ctx.lineTo(x+30,groundY-50);
+    ctx.stroke();
+  }
+
+  if(scene==='murder'){
+    figure(w*0.4, {fallen:true});
+    bloodPool(w*0.4, groundY-3);
+    figure(w*0.68, {tint:'rgba(255,150,150,0.6)'});
+  } else if(scene==='assault'){
+    figure(w*0.42, {tint:'rgba(255,170,170,0.65)', walk:true});
+    figure(w*0.58, {walk:true});
+  } else if(scene==='theft'){
+    shelfWithItems(w*0.66); counter(w*0.1);
+    figure(w*0.4, {walk:true});
+  } else if(scene==='breakin'){
+    windowFrame(w*0.62);
+    figure(w*0.32, {walk:true});
+  } else if(scene==='drugdeal'){
+    figure(w*0.36); figure(w*0.6);
+    bag(w*0.47);
+  } else if(scene==='vandalism'){
+    graffiti(w*0.6);
+    figure(w*0.32, {walk:true});
+  } else if(scene==='harassment'){
+    figure(w*0.3, {walk:true});
+    figure(w*0.62, {tint:'rgba(255,200,150,0.5)'});
+  } else if(scene==='vehicle'){
+    car(w*0.24, true); figure(w*0.78);
+  } else if(scene==='fire'){
     figure(w*0.5);
-    ctx.fillStyle = 'rgba(255,140,40,0.5)';
-    ctx.beginPath(); ctx.moveTo(w*0.75, groundY); ctx.quadraticCurveTo(w*0.78,groundY-40,w*0.73,groundY-60); ctx.quadraticCurveTo(w*0.85,groundY-30,w*0.8,groundY); ctx.closePath(); ctx.fill();
-  } else { figure(w*0.5); }
+    const fx = w*0.76;
+    ctx.fillStyle = 'rgba(255,150,40,0.55)';
+    ctx.beginPath(); ctx.moveTo(fx, groundY); ctx.quadraticCurveTo(fx+16,groundY-42,fx-5,groundY-64); ctx.quadraticCurveTo(fx+22,groundY-30,fx+10,groundY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(120,120,120,0.25)';
+    ctx.beginPath(); ctx.ellipse(fx, groundY-70, 20, 12, 0, 0, Math.PI*2); ctx.fill();
+  } else {
+    figure(w*0.5, {walk:true});
+  }
+
+  /* 스캔라인 + 인터레이스 흔들림 밴드 */
+  ctx.fillStyle = 'rgba(180,255,190,0.035)';
+  for(let y=0;y<h;y+=3) ctx.fillRect(0,y,w,1);
+  const bandY = (Date.now()/40) % h;
+  ctx.fillStyle = 'rgba(180,255,190,0.05)';
+  ctx.fillRect(0, bandY, w, 3);
+
+  /* 그레인 노이즈 */
+  ctx.fillStyle = 'rgba(180,255,190,0.1)';
+  for(let i=0;i<60;i++){ ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1); }
+
+  /* 코너 비네트 */
   const grad = ctx.createRadialGradient(w/2,h/2,10,w/2,h/2,w*0.75);
   grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.55)');
   ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+
+  /* 화면 안 타임스탬프/모션 표시 (하단 캡션과 별개로, 실제 캠 오버레이 느낌) */
+  ctx.fillStyle = 'rgba(180,255,190,0.75)';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('CAM 04', 4, h-5);
+  ctx.textAlign = 'right';
+  if(Math.floor(Date.now()/500)%2===0) ctx.fillText('● MOTION', w-4, h-5);
 }
 function mountEvidenceVisuals(root){
   if(!root) return;
@@ -6792,8 +7001,14 @@ function evidenceThumbHtml(icon){
 function evidenceDetailHtml(d, ev){
   if(!d) return '';
   const visual = classifyEvidenceVisual(ev, d);
+  /* 이미 채택 여부가 결정된 뒤(사건 도중 절차 문제가 제기됐던 증거를 나중에
+     증거 목록에서 다시 열어볼 때)에만 위법 수집 의심 표시를 보여줌.
+     최초 채택/기각을 결정하는 화면에서는 이 표시를 노출하지 않아, 판사가
+     양측 주장만 보고 스스로 판단하게 함. */
+  const taintNote = (ev && ev._tainted) ? `<p style="color:var(--danger);font-size:10px;">⚠️ ${tr('이 증거는 절차상 문제가 제기되었으나 채택되었습니다.','This evidence was admitted despite a procedural objection raised against it.')}</p>` : '';
   if(d.type==='cctv'){
     return `<div class="ev-detail ev-detail-cctv">
+      ${taintNote}
       <div class="cctv-topbar"><span class="cctv-dot"></span> REC</div>
       <div class="cctv-frame"><canvas class="ev-visual-canvas cctv-canvas" width="200" height="110" data-scene="${visual.scene}"></canvas></div>
       <div class="cctv-caption">${d.caption}</div>
@@ -6804,6 +7019,7 @@ function evidenceDetailHtml(d, ev){
     const rows = (d.fields||[]).map(f=>`<div class="fr-row"><span class="fr-label">${f.label}</span><span>${f.value}</span></div>`).join('');
     const showPhoto = visual.kind !== 'generic';
     return `<div class="ev-detail ev-detail-forensic">
+      ${taintNote}
       ${showPhoto ? `<div class="ev-photo-wrap"><canvas class="ev-visual-canvas ev-photo-canvas" width="120" height="120" data-kind="${visual.kind}"></canvas></div>` : ''}
       <h3>${d.title}</h3>
       ${rows}
@@ -6817,6 +7033,7 @@ function evidenceDetailHtml(d, ev){
     </div>`;
   }
   return `<div class="ev-detail">
+    ${taintNote}
     <div class="ev-photo-wrap"><canvas class="ev-visual-canvas ev-photo-canvas" width="140" height="140" data-kind="${visual.kind}"></canvas></div>
     ${d.text||''}
   </div>`;
@@ -7365,12 +7582,12 @@ function showTitle(){
     <div class="title-layout">
       <div class="title-left">
         <img src="icon-512.png" alt="Mini Court logo" class="title-logo" onerror="this.style.display='none'">
-        <h1 style="margin:0 0 4px;">미니법정<span style="font-size:0.6em;color:var(--parchment-dim);">(Mini Court)</span></h1>
-        <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:3px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
-        <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
-        <p style="font-size:12px;color:var(--brass);margin:0 0 2px;line-height:1.25;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
-        <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:3px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
-        <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
+        <h1 class="title-name">미니법정<span class="title-name-en">(Mini Court)</span></h1>
+        <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:5px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
+        <div class="title-levelinfo">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span class="title-levelinfo-sub">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
+        <p class="title-judgestatus">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
+        <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:5px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
+        <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
       </div>
       <div class="title-right">
         <p style="margin:0 0 4px;line-height:1.25;">${t('titleIntro')}</p>

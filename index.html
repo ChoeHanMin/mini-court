@@ -441,6 +441,13 @@
   .btn.tight{padding:8px 20px;margin-top:4px;font-size:12.5px;border-radius:9px;}
   .credit{font-size:16px;color:var(--brass);letter-spacing:2px;margin-top:22px;font-weight:bold;}
   .verline{font-size:10px;color:var(--brass-dim);letter-spacing:2px;margin-top:2px;}
+
+  /* ---------- 타이틀 화면 (PC 와이드 화면에서는 좌: 로고 / 우: 메뉴 2단 구성) ---------- */
+  .title-layout{ display:flex; flex-direction:column; align-items:center; width:100%; }
+  .title-left{ display:flex; flex-direction:column; align-items:center; width:100%; }
+  .title-right{ display:flex; flex-direction:column; align-items:center; width:100%; }
+  .title-logo{ width:56px; height:56px; border-radius:12px; margin-bottom:4px; box-shadow:0 4px 14px rgba(0,0,0,0.55); }
+  .title-btn{ margin-top:8px; }
   .evidenceCard{
     border:1px solid var(--brass-dim);padding:10px;margin-bottom:8px;
     width:100%;max-width:320px;text-align:left;background:rgba(0,0,0,0.25);
@@ -483,10 +490,11 @@
   .ev-detail-cctv .cctv-topbar{display:flex;align-items:center;gap:6px;color:#ff5c5c;font-size:11px;margin-bottom:10px;letter-spacing:1px;}
   .ev-detail-cctv .cctv-dot{width:8px;height:8px;border-radius:50%;background:#ff3b3b;animation:blink 1s infinite;}
   .ev-detail-cctv .cctv-frame{
-    min-height:90px;border:1px dashed #444;display:flex;align-items:center;justify-content:center;
-    font-size:40px;color:#3a3a3a;margin-bottom:10px;
+    border:1px dashed #444;display:flex;align-items:center;justify-content:center;
+    margin-bottom:10px;overflow:hidden;border-radius:2px;
     background:repeating-linear-gradient(0deg,rgba(255,255,255,0.03) 0px,rgba(255,255,255,0.03) 1px,transparent 1px,transparent 3px);
   }
+  .ev-detail-cctv .cctv-frame canvas{display:block;width:100%;height:auto;max-width:220px;}
   .ev-detail-cctv .cctv-caption{color:#ddd;font-size:12px;line-height:1.6;}
   .ev-detail-cctv .cctv-timestamp{color:#8a8a8a;font-size:10px;margin-top:8px;text-align:right;}
   .ev-detail-forensic{
@@ -496,6 +504,8 @@
   .ev-detail-forensic .fr-row{display:flex;font-size:11px;border-bottom:1px solid rgba(36,26,16,0.2);padding:4px 0;}
   .ev-detail-forensic .fr-label{width:80px;flex-shrink:0;font-weight:bold;color:#5a4020;}
   .ev-detail-forensic .fr-conclusion{margin-top:10px;font-size:12px;line-height:1.6;padding:8px;background:rgba(36,26,16,0.06);border-left:3px solid var(--crimson);}
+  .ev-photo-wrap{display:flex;justify-content:center;margin-bottom:12px;}
+  .ev-photo-wrap canvas{border:1px solid #c9bfa0;border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,0.35);width:120px;height:120px;}
   .ev-detail-handwritten{
     background:linear-gradient(180deg,#e8dcc0,#ddcda6);color:#2a2115;padding:20px 18px;
     border:1px solid #a8895a;box-shadow:inset 0 0 20px rgba(0,0,0,0.15);
@@ -539,8 +549,21 @@
     border-radius:12px;
     box-shadow:0 2px 6px rgba(0,0,0,0.3);
     transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease, background .12s ease;
+    display:flex; align-items:center; justify-content:center; gap:7px;
   }
-  .vbtn:hover{border-color:var(--brass);transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,0.35);}
+  .vbtn::before{font-size:1.1em;}
+  .vbtn[data-v="선고유예"]::before{content:"🕊️";}
+  .vbtn[data-v="과료"]::before{content:"🪙";}
+  .vbtn[data-v="벌금"]::before{content:"💰";}
+  .vbtn[data-v="구류"]::before{content:"⏳";}
+  .vbtn[data-v="집행유예"]::before{content:"📝";}
+  .vbtn[data-v="징역"]::before{content:"⛓️";}
+  .vbtn[data-v="금고"]::before{content:"🔒";}
+  .vbtn[data-v="무기징역"]::before{content:"🏚️";}
+  .vbtn[data-v="무기금고"]::before{content:"🏢";}
+  .vbtn[data-v="사형"]::before{content:"☠️";}
+  .vbtn[data-v="무죄"]::before{content:"⚖️";}
+  .vbtn:hover{border-color:var(--brass);transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.4);}
   .vbtn:active{background:var(--brass-dim);color:#231a12;transform:translateY(0);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
   .vbtn.severe{border-color:var(--crimson-light);}
   .vbtn.lenient{border-color:var(--navy-light);}
@@ -638,6 +661,24 @@
     .btn.tight{ font-size:18px!important; padding:13px 26px; }
     .credit{ font-size:22px!important; }
     .verline{ font-size:13px!important; }
+    .title-layout{
+      flex-direction:row; align-items:center; justify-content:center;
+      gap:80px; max-width:1200px; width:100%; margin:0 auto;
+    }
+    .title-left{ flex:0 0 420px; align-items:center; text-align:center; }
+    .title-right{ flex:0 0 480px; align-items:stretch; text-align:left; }
+    .title-right p{ max-width:100%!important; text-align:left; }
+    .title-logo{ width:210px!important; height:210px!important; border-radius:32px!important; margin-bottom:22px!important; box-shadow:0 10px 28px rgba(0,0,0,0.6)!important; }
+    .title-left h1{ font-size:46px!important; }
+    .title-btn{
+      width:100%; max-width:none!important; display:flex; align-items:center; justify-content:center;
+      gap:12px; font-size:22px!important; padding:20px 24px!important; border-radius:16px;
+      margin-top:14px;
+    }
+    .title-btn.primary{
+      background:linear-gradient(180deg,var(--brass),var(--brass-dim)); font-size:27px!important; padding:26px!important;
+      box-shadow:0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
     .evidenceCard{ max-width:600px; padding:14px; }
     .reaction-feed{ max-width:520px; }
     .reaction-line{ font-size:14px!important; padding:6px 12px; }
@@ -648,7 +689,7 @@
     .ev-detail{ max-width:600px; }
     .ev-detail-hint{ font-size:13px!important; }
     .ev-detail-cctv .cctv-topbar{ font-size:14px!important; }
-    .ev-detail-cctv .cctv-frame{ font-size:60px!important; min-height:130px; }
+    .ev-detail-cctv .cctv-frame canvas{ max-width:360px; }
     .ev-detail-cctv .cctv-caption{ font-size:16px!important; }
     .ev-detail-cctv .cctv-timestamp{ font-size:13px!important; }
     .ev-detail-forensic h3{ font-size:18px!important; }
@@ -657,12 +698,15 @@
     .ev-detail-forensic .fr-conclusion{ font-size:16px!important; }
     .ev-detail-handwritten{ font-size:19px!important; }
     .ev-detail-handwritten .hw-source{ font-size:13px!important; }
+    .ev-photo-wrap canvas{ width:180px; height:180px; }
     .choiceBtn{ font-size:17px!important; padding:13px 18px; }
     .objection-banner{ font-size:20px!important; padding:20px 32px; border-width:4px; }
-    #verdictPanel{ padding:26px 24px; }
-    #verdictPanel h2{ font-size:20px!important; }
-    #verdictPanel .sub{ font-size:16px!important; }
-    .vbtn{ font-size:18px!important; padding:20px 10px; }
+    #verdictPanel{ padding:26px 24px; justify-content:center; }
+    #verdictPanel h2{ font-size:24px!important; }
+    #verdictPanel .sub{ font-size:16px!important; margin-bottom:22px; }
+    .verdict-grid{ gap:20px; max-width:920px; width:100%; margin:0 auto; }
+    .vbtn{ font-size:20px!important; min-height:96px; padding:10px 16px; border-radius:18px; letter-spacing:1.5px; }
+    .vbtn::before{ font-size:1.3em; }
     #yearsDisplay{ font-size:38px!important; padding:12px 30px; }
     #yearsHint,#footNote{ font-size:13px!important; }
     #numpad{ grid-template-columns:repeat(3,74px); }
@@ -781,10 +825,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.9.0.0
+   미니법정(Mini Court)  ver 1.10.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.9.0.0';
+const GAME_VERSION = '1.10.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -1361,9 +1405,11 @@ document.addEventListener('pointerdown', ()=>{ playTitleTheme(); }, { once:true 
 const REAL_TRACKS = {
   trial: new Audio('trial_theme.mp3'), /* 재판 진행 중 상시 재생 (코믹/무거운 사건 포함 전체) */
   tense: new Audio('tense_theme.mp3'), /* 긴장감 고조 시 재생 */
+  grand: new Audio('final_statement.mp3'), /* 피고인 최후 진술 순간에만 재생 */
 };
 REAL_TRACKS.trial.loop = true;
 REAL_TRACKS.tense.loop = true;
+REAL_TRACKS.grand.loop = true;
 const REAL_TRACK_BASE_VOL = 0.5;
 function playRealTrack(key){
   const a = REAL_TRACKS[key];
@@ -1569,7 +1615,7 @@ function setSceneBGM(mood, tag){
   stopBGM();
   if(mood==='verdict') startBGM('verdict');
   else if(mood==='tense') playRealTrack('tense');
-  else if(mood==='grand') startBGM('grand', tag);
+  else if(mood==='grand') playRealTrack('grand'); /* 피고인 최후 진술 - 제공받은 곡으로 재생 */
   else if(mood==='somber') startBGM('somber', tag);
   else if(mood==='calm') playRealTrack('trial');
   else startBGM('ambient', tag);
@@ -5602,10 +5648,11 @@ function showEvidenceSubmissionOverlay(item, cb){
     <h1>⚖️ ${tr('이의 있습니다!','Objection!')}</h1>
     <p style="color:var(--brass-dim);">${tr(`${submitterPhrase} 새로운 증거를 제출했습니다. 채택 여부를 결정하기 전에 내용을 확인하십시오.`, `${submitterLabel} has submitted new evidence. Review it before deciding whether to admit it.`)}</p>
     <h2>${ev.icon} ${ev.name}</h2>
-    ${ev.detail ? evidenceDetailHtml(ev.detail) : `<p>${ev.desc}</p>`}
+    ${ev.detail ? evidenceDetailHtml(ev.detail, ev) : `<p>${ev.desc}</p>`}
     <p style="font-size:12px;">${tr('이 증거를 채택하시겠습니까?','Will you admit this evidence?')}</p>
     <button class="btn" onclick="resolveEvidenceAdmit(true)">✅ ${tr('채택한다','Admit')}</button>
     <button class="btn secondary" onclick="resolveEvidenceAdmit(false)">❌ ${tr('기각한다','Reject')}</button>`;
+  mountEvidenceVisuals(ov);
   _pendingEvidenceAdmitCb = cb;
 }
 function resolveEvidenceAdmit(admitted){
@@ -6465,6 +6512,248 @@ async function clearArchive(){
   showArchive();
 }
 
+/* ================= 증거물 실물 사진 / CCTV 캡처 프레임 =================
+   증거 상세 텍스트만으로는 실감이 안 나므로, 증거 이름·설명·상세내용의
+   키워드를 보고 어떤 물증인지 분류해 캔버스로 "증거 사진"을 그려 보여준다.
+   CCTV 증거는 카메라 이모지 대신 흑백 감시카메라 정지 프레임(그레인/실루엣)을
+   그려서 실제 캡처 화면처럼 보이게 한다. */
+function classifyEvidenceVisual(ev, d){
+  const hay = [
+    ev && ev.name, ev && ev.desc,
+    d && d.caption, d && d.conclusion, d && d.text, d && d.title,
+    d && JSON.stringify(d.fields||[])
+  ].filter(Boolean).join(' ');
+  let kind = 'generic';
+  if(/칼|흉기용|회칼|식칼|과도|커터칼/.test(hay)) kind = 'knife';
+  else if(/총|권총|엽총|공기총/.test(hay)) kind = 'gun';
+  else if(/마약|필로폰|대마|히로뽕|엑스터시|약물\s*투약|졸피뎀/.test(hay)) kind = 'drugs';
+  else if(/현금|지폐|뇌물|돈다발|수표|위조지폐/.test(hay)) kind = 'cash';
+  else if(/휴대폰|핸드폰|스마트폰|문자메시지|카카오톡/.test(hay)) kind = 'phone';
+  else if(/농약|독극물|수면제|약병|음독|극약/.test(hay)) kind = 'bottle';
+  else if(/밧줄|노끈|끈으로|테이프로 묶/.test(hay)) kind = 'rope';
+  else if(/라이터|방화|인화물질|휘발유|착화|불을 지/.test(hay)) kind = 'fire';
+  else if(/몽둥이|야구방망이|쇠파이프|둔기|망치/.test(hay)) kind = 'blunt';
+  else if(/DNA|혈흔|혈액|체액|타액|모발|국립과학수사연구원|유전자/.test(hay)) kind = 'vial';
+  else if(/차량|자동차|승용차|트럭|오토바이/.test(hay)) kind = 'car';
+  else if(/편지|쪽지|메모지|일기장/.test(hay)) kind = 'note';
+
+  let scene = 'default';
+  if(/폭행|구타|난투|집단|가격/.test(hay)) scene = 'assault';
+  else if(/절도|훔치|절취|들치기|빼돌/.test(hay)) scene = 'theft';
+  else if(/차량|교통|자동차|충돌|음주운전/.test(hay)) scene = 'vehicle';
+  else if(/방화|화재|불길|연기/.test(hay)) scene = 'fire';
+  return {kind, scene};
+}
+function drawEvBackdrop(ctx, w, h){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#eee6d3';
+  ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = '#c9bfa0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1,1,w-2,h-2);
+  ctx.fillStyle = '#a5222c';
+  ctx.fillRect(0,0,32,14);
+  ctx.fillStyle = '#f2ede0';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('증거', 4, 8);
+}
+const EV_PHOTO_DRAWERS = {
+  knife(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.fillStyle = '#f5f0e6';
+    ctx.beginPath(); ctx.moveTo(-30,10); ctx.lineTo(0,-24); ctx.lineTo(30,10); ctx.lineTo(0,28); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = '#cfc6ac'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.rotate(-0.5);
+    ctx.fillStyle = '#c9d3d6';
+    ctx.beginPath(); ctx.moveTo(-26,-2); ctx.lineTo(15,-5); ctx.lineTo(20,0); ctx.lineTo(15,4); ctx.lineTo(-26,2); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = '#7c8890'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#3a2a1c'; ctx.fillRect(-38,-5,14,10);
+    ctx.fillStyle = '#8a1414';
+    ctx.beginPath(); ctx.ellipse(11,-2,6,3.5,0.3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-2,9,2.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(5,14,1.8,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  },
+  gun(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy-4);
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(-24,-6,34,10);
+    ctx.fillRect(6,-9,14,5);
+    ctx.beginPath(); ctx.moveTo(-24,4); ctx.lineTo(-16,4); ctx.lineTo(-20,22); ctx.lineTo(-26,22); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#555'; ctx.fillRect(-2,-3,4,4);
+    ctx.restore();
+  },
+  drugs(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle = '#cfd6da'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(-22,-26,44,48);
+    ctx.fillStyle = 'rgba(220,225,225,0.5)'; ctx.fillRect(-22,-26,44,48);
+    ctx.fillStyle = '#f5f5f0';
+    ctx.beginPath(); ctx.ellipse(0,10,16,8,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#dcdcd6';
+    for(let i=0;i<10;i++){
+      ctx.beginPath(); ctx.arc(-12+Math.random()*24, 6+Math.random()*8, 1.4, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle = '#a5222c'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-22,-26); ctx.lineTo(22,-26); ctx.stroke();
+    ctx.restore();
+  },
+  cash(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    for(let i=0;i<4;i++){
+      ctx.fillStyle = i%2===0 ? '#8fae7c' : '#7fa06e';
+      ctx.fillRect(-26+i*1.5, -14+i*4, 52, 20);
+      ctx.strokeStyle = '#5c7a4e'; ctx.lineWidth = 1; ctx.strokeRect(-26+i*1.5, -14+i*4, 52, 20);
+    }
+    ctx.fillStyle = '#3a5a2c'; ctx.font = 'bold 10px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('₩', 0, 2);
+    ctx.strokeStyle = '#c9a24b'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-27,4); ctx.lineTo(27,4); ctx.stroke();
+    ctx.restore();
+  },
+  phone(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-16,-30,32,60,6) : ctx.rect(-16,-30,32,60);
+    ctx.fill();
+    ctx.fillStyle = '#7ec6e0'; ctx.fillRect(-13,-25,26,44);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-13,-10); ctx.lineTo(2,4); ctx.lineTo(-5,10); ctx.lineTo(13,25); ctx.stroke();
+    ctx.restore();
+  },
+  bottle(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.fillStyle = 'rgba(150,190,160,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(-6,-30); ctx.lineTo(6,-30); ctx.lineTo(6,-18); ctx.lineTo(14,-8); ctx.lineTo(14,28); ctx.lineTo(-14,28); ctx.lineTo(-14,-8); ctx.lineTo(-6,-18); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = '#5c7a63'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = '#f2ede0'; ctx.fillRect(-11,0,22,16);
+    ctx.fillStyle = '#a5222c'; ctx.font = 'bold 7px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('독', 0, 8);
+    ctx.restore();
+  },
+  rope(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle = '#a8895a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    for(let i=0;i<3;i++){
+      ctx.beginPath(); ctx.arc(0,0,14+i*8,0.3+i*0.4,Math.PI*1.6+i*0.2); ctx.stroke();
+    }
+    ctx.restore();
+  },
+  fire(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.fillStyle = '#333'; ctx.fillRect(-6,4,12,20);
+    ctx.fillStyle = '#ff8c28';
+    ctx.beginPath(); ctx.moveTo(0,-26); ctx.quadraticCurveTo(14,-6,4,10); ctx.quadraticCurveTo(0,-2,-4,10); ctx.quadraticCurveTo(-14,-6,0,-26); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd35c';
+    ctx.beginPath(); ctx.ellipse(0,4,4,8,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  },
+  blunt(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(-0.4);
+    ctx.fillStyle = '#5a4a38'; ctx.fillRect(-6,-30,12,44);
+    ctx.fillStyle = '#3a2f22'; ctx.fillRect(-7,10,14,10);
+    ctx.fillStyle = '#8a1414';
+    ctx.beginPath(); ctx.arc(4,-26,3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  },
+  vial(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.fillStyle = 'rgba(220,225,225,0.4)';
+    ctx.fillRect(-8,-28,16,44);
+    ctx.beginPath(); ctx.arc(0,16,8,0,Math.PI); ctx.fill();
+    ctx.fillStyle = '#a5222c';
+    ctx.fillRect(-8,-4,16,20);
+    ctx.beginPath(); ctx.arc(0,16,8,0,Math.PI); ctx.fill();
+    ctx.strokeStyle = '#8a8a8a'; ctx.lineWidth = 1.2; ctx.strokeRect(-8,-28,16,44);
+    ctx.fillStyle = '#c9a24b'; ctx.fillRect(-9,-32,18,6);
+    ctx.restore();
+  },
+  car(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy+6);
+    ctx.fillStyle = '#7a8a94';
+    ctx.fillRect(-30,-4,60,16);
+    ctx.fillRect(-18,-16,36,14);
+    ctx.fillStyle = '#cfe3f2'; ctx.fillRect(-14,-14,28,10);
+    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(-16,12,6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(16,12,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ff5c5c'; ctx.fillRect(-30,-2,4,6);
+    ctx.restore();
+  },
+  note(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(-0.05);
+    ctx.fillStyle = '#f5efd8'; ctx.fillRect(-26,-32,52,64);
+    ctx.strokeStyle = '#cbbf94'; ctx.lineWidth = 1; ctx.strokeRect(-26,-32,52,64);
+    ctx.strokeStyle = 'rgba(60,50,30,0.35)'; ctx.lineWidth = 1;
+    for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(-20,-18+i*10); ctx.lineTo(20,-18+i*10); ctx.stroke(); }
+    ctx.restore();
+  },
+  generic(ctx,cx,cy){
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 2;
+    ctx.strokeRect(-24,-20,48,40);
+    ctx.beginPath(); ctx.moveTo(-24,-8); ctx.lineTo(24,-8); ctx.stroke();
+    ctx.fillStyle = '#8a7a5a'; ctx.font = 'bold 20px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('?', 0, 12);
+    ctx.restore();
+  }
+};
+function drawEvidencePhoto(canvas, kind){
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  drawEvBackdrop(ctx, w, h);
+  const drawer = EV_PHOTO_DRAWERS[kind] || EV_PHOTO_DRAWERS.generic;
+  drawer(ctx, w/2, h/2+6);
+}
+function drawCctvFrame(canvas, scene){
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#12140f';
+  ctx.fillRect(0,0,w,h);
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  for(let y=0;y<h;y+=3) ctx.fillRect(0,y,w,1);
+  ctx.fillStyle = 'rgba(255,255,255,0.09)';
+  for(let i=0;i<50;i++){ ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1); }
+  const groundY = h*0.82;
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.moveTo(0,groundY); ctx.lineTo(w,groundY); ctx.stroke();
+  function figure(x, tint){
+    ctx.fillStyle = tint || 'rgba(200,200,200,0.55)';
+    ctx.beginPath(); ctx.arc(x, groundY-38, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(x-6, groundY-32, 12, 26);
+    ctx.fillRect(x-9, groundY-6, 6, 10);
+    ctx.fillRect(x+3, groundY-6, 6, 10);
+  }
+  function shelf(x){ ctx.fillStyle = 'rgba(150,150,150,0.35)'; ctx.fillRect(x, groundY-50, 10, 50); }
+  function car(x){
+    ctx.fillStyle = 'rgba(180,180,180,0.5)';
+    ctx.fillRect(x, groundY-22, 60, 18);
+    ctx.fillRect(x+10, groundY-32, 34, 12);
+  }
+  if(scene==='assault'){ figure(w*0.42,'rgba(210,150,150,0.6)'); figure(w*0.56); }
+  else if(scene==='theft'){ shelf(w*0.72); figure(w*0.42); }
+  else if(scene==='vehicle'){ car(w*0.28); figure(w*0.78); }
+  else if(scene==='fire'){
+    figure(w*0.5);
+    ctx.fillStyle = 'rgba(255,140,40,0.5)';
+    ctx.beginPath(); ctx.moveTo(w*0.75, groundY); ctx.quadraticCurveTo(w*0.78,groundY-40,w*0.73,groundY-60); ctx.quadraticCurveTo(w*0.85,groundY-30,w*0.8,groundY); ctx.closePath(); ctx.fill();
+  } else { figure(w*0.5); }
+  const grad = ctx.createRadialGradient(w/2,h/2,10,w/2,h/2,w*0.75);
+  grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+}
+function mountEvidenceVisuals(root){
+  if(!root) return;
+  root.querySelectorAll('canvas.ev-visual-canvas').forEach(cv=>{
+    if(cv.classList.contains('cctv-canvas')) drawCctvFrame(cv, cv.dataset.scene || 'default');
+    else drawEvidencePhoto(cv, cv.dataset.kind || 'generic');
+  });
+}
+
 /* ================= Evidence viewer ================= */
 const EV_DOC_ICONS = new Set(['📋','📄','📝','🧾','✍️','📒','📚','📊','📈','📅','🖨️','🏦','🏥','🏢','🏛️','👑','🩺','🩹','🛂']);
 const EV_PHOTO_ICONS = new Set(['📹','📷','📼','🖥️','💻','📡','🌐','✈️','🚈','🚇','📱','☎️','📞','🗣️','💬','📧','🎭']);
@@ -6482,19 +6771,22 @@ function evidenceThumbHtml(icon){
 }
 /* 증거물 상세보기: CCTV 화면 재구성, 과학수사 감정서, 피고인 자필 메모 등을
    실제로 열람하여 내용을 읽어볼 수 있게 함. e.detail이 있는 증거만 클릭 가능. */
-function evidenceDetailHtml(d){
+function evidenceDetailHtml(d, ev){
   if(!d) return '';
+  const visual = classifyEvidenceVisual(ev, d);
   if(d.type==='cctv'){
     return `<div class="ev-detail ev-detail-cctv">
       <div class="cctv-topbar"><span class="cctv-dot"></span> REC</div>
-      <div class="cctv-frame">🎥</div>
+      <div class="cctv-frame"><canvas class="ev-visual-canvas cctv-canvas" width="200" height="110" data-scene="${visual.scene}"></canvas></div>
       <div class="cctv-caption">${d.caption}</div>
       ${d.timestamp?`<div class="cctv-timestamp">${d.timestamp}</div>`:''}
     </div>`;
   }
   if(d.type==='forensic'){
     const rows = (d.fields||[]).map(f=>`<div class="fr-row"><span class="fr-label">${f.label}</span><span>${f.value}</span></div>`).join('');
+    const showPhoto = visual.kind !== 'generic';
     return `<div class="ev-detail ev-detail-forensic">
+      ${showPhoto ? `<div class="ev-photo-wrap"><canvas class="ev-visual-canvas ev-photo-canvas" width="120" height="120" data-kind="${visual.kind}"></canvas></div>` : ''}
       <h3>${d.title}</h3>
       ${rows}
       <div class="fr-conclusion">${d.conclusion}</div>
@@ -6506,7 +6798,10 @@ function evidenceDetailHtml(d){
       ${d.source?`<div class="hw-source">— ${d.source}</div>`:''}
     </div>`;
   }
-  return `<div class="ev-detail">${d.text||''}</div>`;
+  return `<div class="ev-detail">
+    <div class="ev-photo-wrap"><canvas class="ev-visual-canvas ev-photo-canvas" width="140" height="140" data-kind="${visual.kind}"></canvas></div>
+    ${d.text||''}
+  </div>`;
 }
 function openEvidenceDetail(idx){
   const c = state.currentCase;
@@ -6514,7 +6809,8 @@ function openEvidenceDetail(idx){
   const e = ev && ev[idx];
   if(!e || !e.detail) return;
   const ov = el('overlay');
-  ov.innerHTML = `<h1>${e.name}</h1>${evidenceDetailHtml(e.detail)}<button class="btn" onclick="showEvidence()">${tr('증거 목록으로','Back to Evidence List')}</button>`;
+  ov.innerHTML = `<h1>${e.name}</h1>${evidenceDetailHtml(e.detail, e)}<button class="btn" onclick="showEvidence()">${tr('증거 목록으로','Back to Evidence List')}</button>`;
+  mountEvidenceVisuals(ov);
 }
 function showEvidence(){
   const c = state.currentCase;
@@ -7048,24 +7344,30 @@ function showTitle(){
   const streakN = dailyStreakData.streak || 0;
   const logSum = caseLogSummary();
   ov.innerHTML = `
-    <img src="icon-512.png" alt="Mini Court logo" style="width:56px;height:56px;border-radius:12px;margin-bottom:4px;box-shadow:0 4px 14px rgba(0,0,0,0.55);" onerror="this.style.display='none'">
-    <h1 style="font-size:18px;margin:0 0 4px;">미니법정<span style="font-size:12px;color:var(--parchment-dim);">(Mini Court)</span></h1>
-    <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:3px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
-    <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
-    <p style="font-size:12px;color:var(--brass);margin:0 0 2px;line-height:1.25;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
-    <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:3px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
-    <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
-    <p style="font-size:12px;margin:0 0 4px;line-height:1.25;">${t('titleIntro')}</p>
-    <p style="font-size:10px;color:var(--parchment-dim);margin:0 0 4px;line-height:1.25;">${t('titleWarn')}</p>
-    <button class="btn tight" onclick="handleStartTrialClick()">${t('startTrial')}</button>
-    <button class="btn secondary tight" onclick="handleStartAppealClick()">${t('startAppeal')}</button>
-    <button class="btn secondary tight" onclick="startDailyCase()">📅 ${t('dailyCaseLabel')}${streakN>0 ? ` 🔥${streakN}` : ''}</button>
-    <button class="btn secondary tight" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
-    <button class="btn secondary tight" onclick="startTutorial()">${t('tutorial')}</button>
-    <button class="btn secondary tight" onclick="showArchive()">${t('records')}</button>
-    ${window.electronAPI ? `<button class="btn secondary tight" onclick="quitGame()">🚪 ${tr('게임에서 나가기','Exit Game')}</button>` : ''}
-    <div class="credit" style="font-size:11px;margin-top:8px;">제작: 최한민 · Created By Choi Hanmin</div>
-    <div class="verline" style="margin-top:1px;">ver ${GAME_VERSION}</div>`;
+    <div class="title-layout">
+      <div class="title-left">
+        <img src="icon-512.png" alt="Mini Court logo" class="title-logo" onerror="this.style.display='none'">
+        <h1 style="margin:0 0 4px;">미니법정<span style="font-size:0.6em;color:var(--parchment-dim);">(Mini Court)</span></h1>
+        <button class="btn secondary small" onclick="toggleQuickLang()" style="margin-bottom:3px;">🌐 ${tr('한국어 ✓ / English','한국어 / English ✓')}</button>
+        <div style="font-size:11px;color:var(--brass);margin-bottom:2px;">🎖️ Lv.${lvl} ${tr(titleInfo.ko, titleInfo.en)} <span style="color:var(--parchment-dim);">(${xpIntoLevel}/${XP_PER_LEVEL} XP · ${tr('평판','Rep.')} ${rep}/100)</span></div>
+        <p style="font-size:12px;color:var(--brass);margin:0 0 2px;line-height:1.25;">${judgeName ? `${t('judgeStatusRegistered')}: ${tr(judgeName+' 판사님', 'Judge '+judgeName)}` : t('judgeStatusUnregistered')}</p>
+        <button class="btn secondary small" onclick="changeJudgeNamePrompt()" style="margin-bottom:3px;">✏️ ${judgeName ? t('judgeChangeBtn') : t('judgeSetBtn')}</button>
+        <button class="btn secondary small" onclick="showCaseLogScreen()" style="margin-bottom:4px;font-size:10px;padding:6px 10px;">📔 ${tr('사건 수첩','Case Log')}: ${logSum.done}/${logSum.total} · ⭐${logSum.perfect}</button>
+      </div>
+      <div class="title-right">
+        <p style="margin:0 0 4px;line-height:1.25;">${t('titleIntro')}</p>
+        <p style="font-size:0.83em;color:var(--parchment-dim);margin:0 0 10px;line-height:1.25;">${t('titleWarn')}</p>
+        <button class="btn title-btn primary" onclick="handleStartTrialClick()">⚖️ ${t('startTrial')}</button>
+        <button class="btn title-btn secondary" onclick="handleStartAppealClick()">📑 ${t('startAppeal')}</button>
+        <button class="btn title-btn secondary" onclick="startDailyCase()">📅 ${t('dailyCaseLabel')}${streakN>0 ? ` 🔥${streakN}` : ''}</button>
+        <button class="btn title-btn secondary" onclick="handleStartWarrantClick()">${t('startWarrantLabel')}</button>
+        <button class="btn title-btn secondary" onclick="startTutorial()">${t('tutorial')}</button>
+        <button class="btn title-btn secondary" onclick="showArchive()">${t('records')}</button>
+        ${window.electronAPI ? `<button class="btn title-btn secondary" onclick="quitGame()">🚪 ${tr('게임에서 나가기','Exit Game')}</button>` : ''}
+      </div>
+    </div>
+    <div class="credit" style="margin-top:8px;">제작: 최한민 · Created By Choi Hanmin</div>
+    <div class="verline">ver ${GAME_VERSION}</div>`;
 }
 
 function startDailyCase(){

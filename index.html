@@ -1261,13 +1261,14 @@ function handleStartAppealClick(){
     else showNameInput(showAppealIntro);
   });
 }
+/* 이 허구/각색 고지는 "한 번 확인하면 다시 안 뜨는" 안내가 아니라, 게임을
+   (재)실행할 때마다 매번 뜨는 게 의도된 동작임. 그래서 브라우저/기기에
+   영구 저장하지 않고, 같은 실행(같은 JS 런타임) 안에서 중복으로 여러 번
+   뜨는 것만 _seenDisclaimer로 방지함 — 게임을 껐다 다시 켜면 이 값은
+   초기화되므로 다시 뜬다. */
 let _seenDisclaimer = false;
 async function showLegalDisclaimer(next){
   if(_seenDisclaimer){ next(); return; }
-  try{
-    const res = await window.storage.get('seenDisclaimer', false);
-    if(res && res.value === '1'){ _seenDisclaimer = true; next(); return; }
-  }catch(e){}
   const ov = el('overlay');
   ov.style.display='flex';
   ov.innerHTML = `
@@ -1277,9 +1278,8 @@ async function showLegalDisclaimer(next){
     <p style="font-size:12px;margin-top:-4px;">${I18N.ko.disclaimerFiction}</p>
     <p style="font-size:12px;color:var(--parchment-dim);margin-top:-4px;">${I18N.en.disclaimerFictionEn}</p>
     <button class="btn" id="disclaimerAckBtn">${t('disclaimerAck')}</button>`;
-  el('disclaimerAckBtn').addEventListener('click', async ()=>{
+  el('disclaimerAckBtn').addEventListener('click', ()=>{
     _seenDisclaimer = true;
-    try{ await window.storage.set('seenDisclaimer', '1', false); }catch(e){}
     ov.style.display='none';
     next();
   });

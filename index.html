@@ -1888,25 +1888,10 @@ function drawSpriteFineDetail(ctx, colorGrid, palette, opts, offX, offY, px, col
       const color = colorGrid[r][c];
       if(!color) continue;
       const cx = offX + c*px, cy = offY + r*px;
-      // 머리카락 결: 대각선 하이라이트 잔선
-      if(color === palette.hair && (r+c)%3===0){
-        ctx.fillStyle = shade(color, 28);
-        ctx.fillRect(cx+px*0.12, cy+px*0.08, sub*0.6, sub*1.3);
-      }
-      // 옷감 주름: 세로 방향의 은은한 음영 줄무늬 (격자로 배치해 자연스러운 재질감)
-      else if(color === palette.outfit && (c%2===0) && (r+c)%2===0){
-        ctx.fillStyle = shade(color, -20);
-        ctx.fillRect(cx+px*0.55, cy, sub*0.5, px);
-      }
       // 피부 음영: 얼굴·손 등 피부 영역 하단에 은은한 그림자로 입체감 부여
-      else if(color === palette.skin && r%4===2){
+      if(color === palette.skin && r%4===2){
         ctx.fillStyle = shade(color, -14);
         ctx.fillRect(cx, cy+px*0.62, px, sub*0.5);
-      }
-      // 눈동자 하이라이트: 눈(검은자) 칸 위에 작은 흰 반짝임
-      else if(color === '#20160f'){
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(cx+px*0.52, cy+px*0.14, sub*0.42, sub*0.42);
       }
     }
   }
@@ -9931,7 +9916,7 @@ loadJudgeName();
 Promise.all([loadJudgeCareer(), loadDailyStreak(), loadCaseLog(), loadEarnedAchievements(), loadRivalStats()]).then(()=>{
   if(el('overlay').innerHTML.includes(t('startTrial'))) showTitle();
 });
-showTitle();
+showLegalDisclaimer(showTitle);
 
 setTimeout(()=>{
   const bs = document.getElementById('bootSplash');

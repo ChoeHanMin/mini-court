@@ -880,10 +880,10 @@
 
 <script>
 /* ============================================================
-   미니법정(Mini Court)  ver 1.13.2.0
+   미니법정(Mini Court)  ver 1.14.0.0
    제작자: 최한민
    ============================================================ */
-const GAME_VERSION = '1.13.2.0';
+const GAME_VERSION = '1.14.0.0';
 
 /* ================= 저장소 폴리필 (Claude 아티팩트 밖에서 실행될 때) =================
    window.storage는 Claude.ai 아티팩트 환경에서만 제공되는 API입니다.
@@ -6335,7 +6335,6 @@ function buildNumpad(){
 }
 
 function handleVerdictClick(type){
-  setSceneBGM('verdict'); /* 판결 유형을 실제로 고른 이 순간 최후 진술 음악을 끝내고 선고 음악으로 전환 */
   if(type==='사형' || type==='무기징역' || type==='무기금고'){
     showConfirmSevere(type);
     return;
@@ -6459,6 +6458,7 @@ function proceedToReason(type, years, extras){
   pendingResolveType = type;
   pendingResolveYears = years;
   pendingResolveExtras = extras || {};
+  setSceneBGM('verdict'); /* 판결 사유를 고르는 이 순간 최후 진술 음악을 끝내고 선고 음악으로 전환 */
   el('verdictPanel').style.display = 'none';
   const ov = el('overlay');
   ov.style.display = 'flex';
@@ -6780,14 +6780,31 @@ const EV_PHOTO_DRAWERS = {
     ctx.fill(); ctx.strokeStyle = '#5c666c'; ctx.lineWidth = 1; ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.8;
     ctx.beginPath(); ctx.moveTo(-40,-3); ctx.lineTo(24,-6); ctx.stroke();
+    /* 칼날 아랫면 톱니 자국 (미세한 흠집) */
+    ctx.strokeStyle = 'rgba(80,90,95,0.5)'; ctx.lineWidth = 0.6;
+    for(let i=0;i<9;i++){
+      const nx = -36+i*8;
+      ctx.beginPath(); ctx.moveTo(nx, 4.5); ctx.lineTo(nx+2, 2.5); ctx.stroke();
+    }
     const handleGrad = ctx.createLinearGradient(-66,-9,-42,9);
     handleGrad.addColorStop(0,'#1c140d'); handleGrad.addColorStop(0.5,'#4a3520'); handleGrad.addColorStop(1,'#241a12');
     ctx.fillStyle = handleGrad; ctx.fillRect(-66,-8,24,16);
     ctx.fillStyle = '#c9a24b';
     [[ -58,-3],[-48,3]].forEach(([x,y])=>{ ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill(); });
+    /* 손잡이에 남은 지문 얼룩 (감정 포인트를 시각적으로 암시) */
+    ctx.fillStyle = 'rgba(200,180,150,0.18)';
+    for(let i=0;i<4;i++){ ctx.beginPath(); ctx.ellipse(-60+i*3.5,-1+((i%2)*3),2.6,1.6,0.4,0,Math.PI*2); ctx.fill(); }
     ctx.fillStyle = '#7a1010';
     ctx.beginPath(); ctx.ellipse(20,-4,11,5.5,0.3,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(23,-6,3.5,1.5,0.3,0,Math.PI*2); ctx.fill();
+    /* 칼끝에서 핏방울이 계속 뚝뚝 떨어지는 애니메이션 (짧은 영상처럼 보이게) */
+    {
+      const cycle = 1800, tnow = (Date.now()%cycle)/cycle;
+      const dripY = -2 + tnow*36;
+      const dripAlpha = tnow < 0.82 ? 1 : Math.max(0, (1-tnow)/0.18);
+      ctx.fillStyle = `rgba(122,16,16,${dripAlpha})`;
+      ctx.beginPath(); ctx.ellipse(21, dripY, 1.8+tnow*0.6, 2.6+tnow, 0, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
     ctx.fillStyle = '#7a1010';
     ctx.beginPath(); ctx.arc(-4,26,4,0,Math.PI*2); ctx.fill();
@@ -7040,6 +7057,9 @@ function drawCctvFrame(canvas, scene){
   const groundY = h*0.78;
   const GC = 'rgba(170,255,180,'; /* 감시카메라 초록 모노톤 컬러 헬퍼 접두 */
   ctx.clearRect(0,0,w,h);
+  ctx.save();
+  /* 손떨림 없는 고정 카메라라도 저가형 CCTV 특유의 미세한 지터를 살짝 줌 */
+  ctx.translate(Math.sin(Date.now()/130)*0.6, Math.cos(Date.now()/170)*0.4);
 
   /* 야간 감시카메라 특유의 초록빛 단색 톤 배경 (벽~바닥 그라데이션) */
   const bgGrad = ctx.createLinearGradient(0,0,0,h);
@@ -7252,19 +7272,39 @@ function drawCctvFrame(canvas, scene){
   grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.55)');
   ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
 
-  /* 화면 안 타임스탬프/모션 표시 (하단 캡션과 별개로, 실제 캠 오버레이 느낌) */
+  /* 화면 안 타임스탬프/모션 표시 (하단 캡션과 별개로, 실제 캠 오버레이 느낌).
+     초 단위가 실제로 째깍째깍 흘러가서 "녹화 중인 영상"처럼 보이게 함 */
   ctx.fillStyle = GC+'0.75)';
   ctx.font = `${Math.max(8,w*0.032)}px monospace`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillText('CAM 04', 4, h-5);
+  const nowD = new Date();
+  const hh = String(nowD.getHours()).padStart(2,'0'), mm = String(nowD.getMinutes()).padStart(2,'0'), ss = String(nowD.getSeconds()).padStart(2,'0');
+  ctx.fillText(`${hh}:${mm}:${ss}`, 4, 12);
   ctx.textAlign = 'right';
   if(Math.floor(Date.now()/500)%2===0) ctx.fillText('● MOTION', w-4, h-5);
+  ctx.restore();
+}
+/* 정지 이미지 대신, 캔버스를 매 프레임 다시 그려서 짧은 영상처럼 보이게 함
+   (CCTV는 인물이 계속 움직이고 그레인이 흔들리며, 흉기 사진은 핏방울이
+   주기적으로 떨어짐). 캔버스가 화면(overlay)에서 사라지면(다른 화면으로
+   전환되면) 자동으로 멈춤 — 별도 정리 로직 없이도 안전함 */
+function loopDrawOnCanvas(cv, drawFn){
+  function step(){
+    if(!document.body.contains(cv)) return;
+    drawFn();
+    requestAnimationFrame(step);
+  }
+  step();
 }
 function mountEvidenceVisuals(root){
   if(!root) return;
   root.querySelectorAll('canvas.ev-visual-canvas').forEach(cv=>{
-    if(cv.classList.contains('cctv-canvas')) drawCctvFrame(cv, cv.dataset.scene || 'default');
-    else drawEvidencePhoto(cv, cv.dataset.kind || 'generic');
+    if(cv.classList.contains('cctv-canvas')){
+      loopDrawOnCanvas(cv, ()=>drawCctvFrame(cv, cv.dataset.scene || 'default'));
+    } else {
+      loopDrawOnCanvas(cv, ()=>drawEvidencePhoto(cv, cv.dataset.kind || 'generic'));
+    }
   });
 }
 
